@@ -20,8 +20,14 @@ scalaVersion := "2.11.11"
 resolvers += Resolver.sonatypeRepo("snapshots")
 resolvers += Resolver.sonatypeRepo("releases")
 
+libraryDependencies += "com.github.biopet" %% "spark-utils" % "0.3-SNAPSHOT" changing()
 libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.2"
 libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.1" % Test
+
+//TODO: move to spark utils
+libraryDependencies += "org.bdgenomics.adam" %% "adam-core-spark2" % "0.22.0"
+libraryDependencies += "org.bdgenomics.utils" %% "utils-misc-spark2" % "0.2.13"
+
 
 mainClass in assembly := Some("nl.biopet.tools.digeneicsearch.DigeneicSearch")
 
