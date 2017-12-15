@@ -1,6 +1,5 @@
 organization := "com.github.biopet"
-//TODO: change name
-name := "ToolTemplate"
+name := "DigeneicSearch"
 
 homepage := Some(url(s"https://github.com/biopet/$urlToolName"))
 licenses := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
@@ -12,10 +11,7 @@ scmInfo := Some(
   )
 )
 
-developers := List(
-  Developer(id="ffinfo", name="Peter van 't Hof", email="pjrvanthof@gmail.com", url=url("https://github.com/ffinfo")),
-  Developer(id="rhpvorderman", name="Ruben Vorderman", email="r.h.p.vorderman@lumc.nl", url=url("https://github.com/rhpvorderman"))
-)
+developers += Developer(id="ffinfo", name="Peter van 't Hof", email="pjrvanthof@gmail.com", url=url("https://github.com/ffinfo"))
 
 publishMavenStyle := true
 
@@ -27,8 +23,7 @@ resolvers += Resolver.sonatypeRepo("releases")
 libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.2"
 libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.1" % Test
 
-//TODO: change mainClass
-mainClass in assembly := Some("nl.biopet.tools.template.ToolTemplate")
+mainClass in assembly := Some("nl.biopet.tools.digeneicsearch.DigeneicSearch")
 
 useGpg := true
 
@@ -65,9 +60,8 @@ releaseProcess := Seq[ReleaseStep](
 )
 
 // Documentation stuff
-//TODO: Change these two variables
-lazy val urlToolName="tool-template"
-lazy val classPrefix="nl.biopet.tools.template"
+lazy val urlToolName="digeneicsearch"
+lazy val classPrefix="nl.biopet.tools.digeneicsearch"
 
 import LaikaKeys._
 enablePlugins(LaikaSitePlugin)

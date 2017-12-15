@@ -1,8 +1,8 @@
-package nl.biopet.tools.template
+package nl.biopet.tools.digenicsearch
 
 import nl.biopet.utils.tool.ToolCommand
 
-object ToolTemplate extends ToolCommand[Args] {
+object DigenicSearch extends ToolCommand[Args] {
   def emptyArgs = Args()
   def argsParser = new ArgsParser(this)
 
