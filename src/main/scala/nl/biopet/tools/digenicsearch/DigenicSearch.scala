@@ -95,12 +95,6 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
-  case class Region(contig: String, start: Int, end: Int)
-
-  case class Variant(contig: String, pos: Int, alleles: Array[String], genotypes: Array[Genotype], dummy: Boolean = true)
-
-  case class Genotype(alleles: Array[Short], dp: Option[Int] = None, gq: Option[Int] = None)
-
   /** creates regions to analyse */
   def generateRegions(cmdArgs: Args): List[Region] = {
     val regions = (cmdArgs.regions match {

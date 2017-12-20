@@ -21,4 +21,4 @@ libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.1" % Test
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.2.1" % Provided
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.2.1" % Provided
 
-mainClass in assembly := Some("nl.biopet.tools.digeneicsearch.DigeneicSearch")
+mainClass in assembly := Some("nl.biopet.tools.digenicsearch.DigenicSearch")
