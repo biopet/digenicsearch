@@ -6,6 +6,17 @@ import nl.biopet.utils.tool.{AbstractOptParser, ToolCommand}
 
 class ArgsParser(toolCommand: ToolCommand[Args])
     extends AbstractOptParser[Args](toolCommand) {
+
+  def parseAnnotationFilter(arg: String): (String, Double => Boolean) = {
+    if (arg.contains(">=")) {
+      val split = arg.split(">=", 2)
+      (split(0), _ >= split(1).toDouble)
+    } else if (arg.contains("<=")) {
+      val split = arg.split("<=", 2)
+      (split(0), _ <= split(1).toDouble)
+    } else throw new IllegalArgumentException("No method found, possible methods: >=, <=")
+  }
+
   opt[File]("inputFile")
     .abbr("i")
     .unbounded()
@@ -23,6 +34,16 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[File]("regions")
     .action((x, c) => c.copy(regions = Some(x)))
     .text("Only using this regions in the bed file")
+  opt[String]("singleAnnotationFilter")
+    .action { case (x, c) =>
+      c.copy(singleAnnotationFilter = c.singleAnnotationFilter :+ parseAnnotationFilter(x))
+    }
+    .text("Filter on single variant")
+  opt[String]("pairAnnotationFilter")
+    .action { case (x, c) =>
+      c.copy(pairAnnotationFilter = c.pairAnnotationFilter :+ parseAnnotationFilter(x))
+    }
+    .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
   opt[Int]("binSize") action { (x, c) =>
     c.copy(binSize = x)
   } text "Binsize in estimated base pairs"

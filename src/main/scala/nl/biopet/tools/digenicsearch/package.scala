@@ -7,9 +7,14 @@ package object digenicsearch {
                      pos: Int,
                      alleles: Array[String],
                      genotypes: Array[Genotype],
-                     anotations: Map[String, String] = Map(),
-                     dummy: Boolean = true)
+                     annotations: Array[(String, Array[Double])] = Array())
 
-  case class Genotype(alleles: Array[Short], dp: Option[Int] = None, gq: Option[Int] = None)
+  case class Genotype(alleles: Array[Short], dp: Int, gq: Int)
+
+  case class VariantList(idx: Int, variants: Array[Variant])
+
+  case class Idx(i: Int, j: Int)
+  case class IdxWithVariant(i: Int, j: Int, v1: VariantList)
+  case class IdxWithVariants(i: Int, j: Int, v1: VariantList, v2: VariantList)
 
 }
