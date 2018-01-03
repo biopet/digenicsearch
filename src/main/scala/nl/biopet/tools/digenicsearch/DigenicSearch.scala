@@ -49,8 +49,30 @@ object DigenicSearch extends ToolCommand[Args] {
     val singleFilters = sc.broadcast(cmdArgs.singleAnnotationFilter)
     val pairFilters = sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
-    val regions = generateRegions(cmdArgs)
+    val regions = generateRegions(cmdArgs).toArray
     val regionsRdd = sc.parallelize(regions, regions.size)
+    val blablabla = regions.zipWithIndex.map(r => r._2 -> sc.parallelize(Seq(r._1), 1).mapPartitions { it =>
+      val readers = inputFiles.value.map(new VCFFileReader(_))
+      it.map { region =>
+        loadRegion(readers, region, samples, annotations).toList
+      }
+    }.cache()).toMap
+
+    val futures2: Seq[Future[Long]] = for (i <- 0 to regions.length; j <- i to regions.length) yield {
+      val rdd = blablabla(i).union(blablabla(j)).repartition(1)
+      rdd.mapPartitions { bla =>
+        val list1 = bla.next()
+        val list2 = bla.next()
+        for (v1 <- list1.toIterator; v2 <- list2) yield {
+          (v1, v2)
+        }
+        //Iterator(bla.size)
+      }.countAsync()
+    }
+
+    println(Await.result(Future.sequence(futures2), Duration.Inf).sum)
+
+    sys.exit()
 
     val variants = regionsRdd.mapPartitions { it =>
       val readers = inputFiles.value.map(new VCFFileReader(_))
