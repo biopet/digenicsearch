@@ -1,7 +1,7 @@
 organization := "com.github.biopet"
 organizationName := "Sequencing Analysis Support Core - Leiden University Medical Center"
 
-startYear := Some(2014)
+startYear := Some(2017)
 
 name := "DigenicSearch"
 biopetUrlName := "digenicsearch"
