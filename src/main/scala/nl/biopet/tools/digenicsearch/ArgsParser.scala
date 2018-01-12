@@ -47,6 +47,9 @@ class ArgsParser(toolCommand: ToolCommand[Args])
       c.copy(pairAnnotationFilter = c.pairAnnotationFilter :+ parseAnnotationFilter(x))
     }
     .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
+  opt[Long]("maxDistance") action { (x, c) =>
+    c.copy(maxDistance = Some(x))
+  } text "maxDistance in base pairs. This option will make the assumption that both variants are on the same contig"
   opt[Int]("binSize") action { (x, c) =>
     c.copy(binSize = x)
   } text "Binsize in estimated base pairs"
