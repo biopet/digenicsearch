@@ -14,7 +14,9 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     } else if (arg.contains("<=")) {
       val split = arg.split("<=", 2)
       (split(0), _ <= split(1).toDouble)
-    } else throw new IllegalArgumentException("No method found, possible methods: >=, <=")
+    } else
+      throw new IllegalArgumentException(
+        "No method found, possible methods: >=, <=")
   }
 
   opt[File]("inputFile")
@@ -38,13 +40,19 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .action((x, c) => c.copy(pedFile = Some(x)))
     .text("Input ped file for family relations and effected/non-effected")
   opt[String]("singleAnnotationFilter")
-    .action { case (x, c) =>
-      c.copy(singleAnnotationFilter = c.singleAnnotationFilter :+ parseAnnotationFilter(x))
+    .action {
+      case (x, c) =>
+        c.copy(
+          singleAnnotationFilter = c.singleAnnotationFilter :+ parseAnnotationFilter(
+            x))
     }
     .text("Filter on single variant")
   opt[String]("pairAnnotationFilter")
-    .action { case (x, c) =>
-      c.copy(pairAnnotationFilter = c.pairAnnotationFilter :+ parseAnnotationFilter(x))
+    .action {
+      case (x, c) =>
+        c.copy(
+          pairAnnotationFilter = c.pairAnnotationFilter :+ parseAnnotationFilter(
+            x))
     }
     .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
   opt[Long]("maxDistance") action { (x, c) =>
