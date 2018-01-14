@@ -1,5 +1,6 @@
 package nl.biopet.tools.digenicsearch
 
+import com.google.common.io.Files
 import nl.biopet.utils.test.tools.ToolTest
 import org.testng.annotations.Test
 
@@ -14,12 +15,13 @@ class DigenicSearchTest extends ToolTest[Args] {
 
   @Test
   def test(): Unit = {
+    val outputDir = Files.createTempDir()
     DigenicSearch.main(Array("-R",
-      "/exports/sasc/testing/fixtures/reference/bwa/reference.fasta",
+      resourcePath("/reference.fasta"),
       "-o",
-      "/home/pjvan_thof/test/digenic",
+      outputDir.getAbsolutePath,
       "-i",
-      "/exports/sasc/testing/fixtures/samples/wgs2/wgs2.vcf.gz",
+      resourcePath("/wgs2.vcf.gz"),
 //      "--pairAnnotationFilter",
 //      "DP>=10",
       "--binSize", "1000", "--maxDistance", "999"))

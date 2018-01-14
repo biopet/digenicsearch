@@ -1,28 +1,20 @@
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
+import java.io.{File, PrintWriter}
 
-import htsjdk.variant.variantcontext.{Allele, VariantContext}
+import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
-import nl.biopet.utils.ngs.fasta
 import nl.biopet.utils.ngs.intervals.{BedRecord, BedRecordList}
-import nl.biopet.utils.spark
 import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.api.java.function.FilterFunction
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SQLContext, SparkSession}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-//import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
-//import org.bdgenomics.adam.rdd.ADAMContext._
-
-import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object DigenicSearch extends ToolCommand[Args] {
   def emptyArgs = Args()
@@ -36,7 +28,6 @@ object DigenicSearch extends ToolCommand[Args] {
     val sparkConf: SparkConf =
       new SparkConf(true).setMaster(cmdArgs.sparkMaster.getOrElse("local[1]"))
     val sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
-    import sparkSession.implicits._
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
@@ -114,16 +105,14 @@ object DigenicSearch extends ToolCommand[Args] {
         }
       }
 
-    val result = sc.union(futures2).collect()
+    val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
+    val writer = new PrintWriter(outputFile)
+    sc.union(futures2).map { case (v1, v2) =>
+      (v1.contig, v1.pos, v2.contig, v2.pos)
+    }.toLocalIterator.foreach{ case (c1, p1, c2, p2) => writer.println(s"$c1\t$p1\t$c2\t$p2") }
 
-    println(
-      Await
-        .result(Future.sequence(
-                  futures2.map(_.countAsync().asInstanceOf[Future[Long]])),
-                Duration.Inf)
-        .sum)
+    writer.close()
 
-    Thread.sleep(1000000)
     sc.stop()
 
     logger.info("Done")
@@ -202,16 +191,16 @@ object DigenicSearch extends ToolCommand[Args] {
 
   def descriptionText: String =
     """
-      |jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+      |
     """.stripMargin
 
   def manualText: String =
     """
-      |jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+      |
     """.stripMargin
 
   def exampleText: String =
     """
-      |jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+      |
     """.stripMargin
 }
