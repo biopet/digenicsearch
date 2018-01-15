@@ -94,8 +94,13 @@ object DigenicSearch extends ToolCommand[Args] {
     val list = List(v1, v2)
     pairFilters.isEmpty ||
     pairFilters.forall { c =>
-      list.exists(v =>
-        v.annotations.find(_.key == c.key).flatMap(_.value).forall(c.method))
+      list.exists(
+        v =>
+          v.annotations
+            .find(_.key == c.key)
+            .toList
+            .flatMap(_.value)
+            .forall(c.method))
     }
   }
 
@@ -187,7 +192,11 @@ object DigenicSearch extends ToolCommand[Args] {
       singleFilters: Broadcast[List[AnnotationFilter]]): Boolean = {
     singleFilters.value.isEmpty ||
     singleFilters.value.forall { c =>
-      v.annotations.find(_.key == c.key).flatMap(_.value).forall(c.method)
+      v.annotations
+        .find(_.key == c.key)
+        .toList
+        .flatMap(_.value)
+        .forall(c.method)
     }
   }
 
