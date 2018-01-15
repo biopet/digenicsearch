@@ -29,12 +29,14 @@ import nl.biopet.utils.ngs.intervals.{BedRecord, BedRecordList}
 import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.collection.JavaConversions._
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object DigenicSearch extends ToolCommand[Args] {
@@ -45,7 +47,6 @@ object DigenicSearch extends ToolCommand[Args] {
     val cmdArgs = cmdArrayToArgs(args)
 
     logger.info("Start")
-//    val sparkConf: SparkConf = spark.getConf(toolName, cmdArgs.sparkMaster, cmdArgs.sparkConfigValues)
     val sparkConf: SparkConf =
       new SparkConf(true).setMaster(cmdArgs.sparkMaster.getOrElse("local[1]"))
     val sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
@@ -57,78 +58,78 @@ object DigenicSearch extends ToolCommand[Args] {
     require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
             "Duplicated samples detected")
 
-//    val dict = SequenceDictionary.fromSAMSequenceDictionary(fasta.getCachedDict(cmdArgs.reference))
-
     val annotations: Broadcast[Set[String]] = sc.broadcast(
       cmdArgs.singleAnnotationFilter
         .map(_._1)
         .toSet ++ cmdArgs.pairAnnotationFilter.map(_._1).toSet)
 
-    val singleFilters = sc.broadcast(cmdArgs.singleAnnotationFilter)
-    val pairFilters = sc.broadcast(cmdArgs.pairAnnotationFilter)
+    val maxDistance = sc.broadcast(cmdArgs.maxDistance)
+    val singleFilters: Broadcast[List[(String, Double => Boolean)]] =
+      sc.broadcast(cmdArgs.singleAnnotationFilter)
+    val pairFilters: Broadcast[List[(String, Double => Boolean)]] =
+      sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
-    val regions = generateRegions(cmdArgs).toArray
-    val regionsRdds = regions.zipWithIndex
-      .map(
-        r =>
-          r._2 -> sc
-            .parallelize(Seq(r._1), 1)
-            .mapPartitions { it =>
-              val readers = inputFiles.value.map(new VCFFileReader(_))
-              it.map { region =>
-                region
-                  .flatMap(loadRegion(readers, _, samples, annotations).toList)
-                  .filter { v =>
-                    singleFilters.value.isEmpty ||
-                    singleFilters.value.forall { c =>
-                      v.annotations.find(_._1 == c._1).get._2.forall(c._2)
-                    }
-                  }
-              }
-            }
-            .cache())
-      .toMap
-
-    val futures2 =
-      for (i <- regions.indices; j <- i until regions.length
-           if toFarAway(regions(i), regions(j), cmdArgs.maxDistance)) yield {
-        val same = i == j
-        val rdd = regionsRdds(i)
-          .union(regionsRdds(j))
-          .repartition(1)
-        rdd.mapPartitions { records =>
-          val list1 = records.next()
-          val list2 = records.next()
-          (for {
-            v1 <- list1.zipWithIndex.toIterator
-            v2 <- list2.zipWithIndex
-            if !same || v1._2 < v2._2
-          } yield {
-            val sorted = List(v1._1, v2._1).sortBy(v => (v.contig, v.pos))
-            (sorted(0), sorted(1))
-          }).filter {
-              case (v1, v2) =>
-                cmdArgs.maxDistance match {
-                  case Some(distance) if v1.contig != v2.contig => false
-                  case Some(distance) => (v1.pos - v2.pos).abs <= distance
-                  case _ => true
-                }
-            }
-            .filter {
-              case (v1, v2) =>
-                val list = List(v1, v2)
-                pairFilters.value.isEmpty ||
-                pairFilters.value.forall { c =>
-                  list.exists(v =>
-                    v.annotations.find(_._1 == c._1).get._2.forall(c._2))
-                }
-            }
-        }
+    val regions: Array[List[Region]] = generateRegions(cmdArgs).toArray
+    val regionsRdds: Map[Int, RDD[List[Variant]]] =
+      loadRegions(regions, inputFiles, samples, annotations).map {
+        case (id, rdd) =>
+          (id, rdd.map(_.filter(singleFilter(_, singleFilters))).cache())
       }
 
+    val combinations = createCombinations(regionsRdds, regions, maxDistance)
+      .map(toFarAway(_, maxDistance))
+      .map(pairedFilter(_, pairFilters))
+
     val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
+    writeOutput(sc.union(combinations), outputFile)
+
+    sc.stop()
+    logger.info("Done")
+  }
+
+  def pairedFilter(v1: Variant,
+                   v2: Variant,
+                   pairFilters: List[(String, Double => Boolean)]): Boolean = {
+    val list = List(v1, v2)
+    pairFilters.isEmpty ||
+    pairFilters.forall { c =>
+      list.exists(v => v.annotations.find(_._1 == c._1).get._2.forall(c._2))
+    }
+  }
+
+  def pairedFilter(rdd: RDD[(Variant, Variant)],
+                   pairFilters: Broadcast[List[(String, Double => Boolean)]])
+    : RDD[(Variant, Variant)] = {
+    rdd.filter { case (v1, v2) => pairedFilter(v1, v2, pairFilters.value) }
+  }
+
+  def createCombinations(regionsRdds: Map[Int, RDD[List[Variant]]],
+                         regions: Array[List[Region]],
+                         maxDistance: Broadcast[Option[Long]])
+    : IndexedSeq[RDD[(Variant, Variant)]] =
+    for (i <- regions.indices; j <- i until regions.length
+         if toFarAway(regions(i), regions(j), maxDistance.value)) yield {
+      val same = i == j
+      val rdd = regionsRdds(i)
+        .union(regionsRdds(j))
+        .repartition(1)
+      rdd.mapPartitions { records =>
+        val list1 = records.next()
+        val list2 = records.next()
+        (for {
+          v1 <- list1.zipWithIndex.toIterator
+          v2 <- list2.zipWithIndex
+          if !same || v1._2 < v2._2
+        } yield {
+          val sorted = List(v1._1, v2._1).sortBy(v => (v.contig, v.pos))
+          (sorted(0), sorted(1))
+        })
+      }
+    }
+
+  def writeOutput(rdd: RDD[(Variant, Variant)], outputFile: File): Unit = {
     val writer = new PrintWriter(outputFile)
-    sc.union(futures2)
+    rdd
       .map {
         case (v1, v2) =>
           (v1.contig, v1.pos, v2.contig, v2.pos)
@@ -137,12 +138,7 @@ object DigenicSearch extends ToolCommand[Args] {
       .foreach {
         case (c1, p1, c2, p2) => writer.println(s"$c1\t$p1\t$c2\t$p2")
       }
-
     writer.close()
-
-    sc.stop()
-
-    logger.info("Done")
   }
 
   def toFarAway(list1: List[Region],
@@ -157,15 +153,61 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
+  def toFarAway(v1: Variant, v2: Variant, maxDistance: Option[Long]): Boolean = {
+    maxDistance match {
+      case Some(_) if v1.contig != v2.contig => false
+      case Some(distance) => (v1.pos - v2.pos).abs <= distance
+      case _ => true
+    }
+  }
+
+  def toFarAway(
+      rdd: RDD[(Variant, Variant)],
+      maxDistance: Broadcast[Option[Long]]): RDD[(Variant, Variant)] = {
+    rdd.filter { case (v1, v2) => toFarAway(v1, v2, maxDistance.value) }
+  }
+
+  def loadRegions(regions: Array[List[Region]],
+                  inputFiles: Broadcast[List[File]],
+                  samples: Broadcast[Array[String]],
+                  annotations: Broadcast[Set[String]])(
+      implicit sc: SparkContext): Map[Int, RDD[List[Variant]]] = {
+    regions.zipWithIndex
+      .map(
+        r =>
+          r._2 -> sc
+            .parallelize(Seq(r._1), 1)
+            .mapPartitions { it =>
+              val readers = inputFiles.value.map(new VCFFileReader(_))
+              it.map { region =>
+                region
+                  .flatMap(loadRegion(readers, _, samples, annotations).toList)
+              }
+          })
+      .toMap
+  }
+
+  def singleFilter(
+      v: Variant,
+      singleFilters: Broadcast[List[(String, Double => Boolean)]]): Boolean = {
+    singleFilters.value.isEmpty ||
+    singleFilters.value.forall { c =>
+      v.annotations.find(_._1 == c._1).get._2.forall(c._2)
+    }
+  }
+
   def loadRegion(
       inputReaders: List[VCFFileReader],
       region: Region,
       samples: Broadcast[Array[String]],
       annotationsFields: Broadcast[Set[String]]): Iterator[Variant] = {
-    val bedRecord = BedRecord(region.contig, region.start, region.end)
     new Iterator[Variant] {
       protected val iterators: List[BufferedIterator[VariantContext]] =
-        inputReaders.map(vcf.loadRegion(_, bedRecord)).map(_.buffered)
+        inputReaders
+          .map(
+            vcf.loadRegion(_,
+                           BedRecord(region.contig, region.start, region.end)))
+          .map(_.buffered)
 
       def hasNext: Boolean = iterators.exists(_.hasNext)
 
@@ -195,7 +237,7 @@ object DigenicSearch extends ToolCommand[Args] {
             .toArray
           Genotype(g.toList, bla.head.getDP, bla.head.getDP)
         }
-        Variant(bedRecord.chr,
+        Variant(region.contig,
                 position,
                 alleles.toList,
                 genotypes.toList,
