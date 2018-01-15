@@ -19,18 +19,34 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package nl.biopet.tools.digenicsearch
+package nl.biopet.tools
 
-import java.io.File
+package object digenicsearch {
+  case class Region(contig: String, start: Int, end: Int) {
+    def distance(other: Region): Option[Long] = {
+      if (this.contig == other.contig) {
+        if (this.start > other.end) Some(this.start - other.end)
+        else if (other.start > this.end) Some(other.start - this.end)
+        else Some(0)
+      } else None
+    }
+  }
 
-case class Args(inputFiles: List[File] = Nil,
-                outputDir: File = null,
-                reference: File = null,
-                regions: Option[File] = None,
-                pedFile: Option[File] = None,
-                singleAnnotationFilter: List[AnnotationFilter] = Nil,
-                pairAnnotationFilter: List[AnnotationFilter] = Nil,
-                maxDistance: Option[Long] = None,
-                binSize: Int = 10000000,
-                maxContigsInSingleJob: Int = 250,
-                sparkMaster: Option[String] = None)
+  case class AnnotationFilter(key: String, method: Double => Boolean)
+
+  case class AnnotationValue(key: String, value: List[Double])
+  case class Variant(contig: String,
+                     pos: Int,
+                     alleles: List[String],
+                     genotypes: List[Genotype],
+                     annotations: List[AnnotationValue] = List())
+
+  case class Genotype(alleles: List[Short], dp: Int, gq: Int)
+
+  case class VariantList(idx: Int, variants: Array[Variant])
+
+  case class Idx(i: Int, j: Int)
+  case class IdxWithVariant(i: Int, j: Int, v1: VariantList)
+  case class IdxWithVariants(i: Int, j: Int, v1: VariantList, v2: VariantList)
+
+}
