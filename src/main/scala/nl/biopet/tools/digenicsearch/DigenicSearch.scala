@@ -77,7 +77,7 @@ object DigenicSearch extends ToolCommand[Args] {
       }
 
     val combinations = createCombinations(regionsRdds, regions, maxDistance)
-      .map(toFarAway(_, maxDistance))
+      .map(distanceFilter(_, maxDistance))
       .map(pairedFilter(_, pairFilters))
 
     val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
@@ -87,6 +87,7 @@ object DigenicSearch extends ToolCommand[Args] {
     logger.info("Done")
   }
 
+  /** This filters if 1 of the 2 variants returns true */
   def pairedFilter(v1: Variant,
                    v2: Variant,
                    pairFilters: List[(String, Double => Boolean)]): Boolean = {
@@ -97,18 +98,20 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
+  /** This filters if 1 of the 2 variants returns true */
   def pairedFilter(rdd: RDD[(Variant, Variant)],
                    pairFilters: Broadcast[List[(String, Double => Boolean)]])
     : RDD[(Variant, Variant)] = {
     rdd.filter { case (v1, v2) => pairedFilter(v1, v2, pairFilters.value) }
   }
 
+  /** This created a list of combinations rdds */
   def createCombinations(regionsRdds: Map[Int, RDD[List[Variant]]],
                          regions: Array[List[Region]],
                          maxDistance: Broadcast[Option[Long]])
     : IndexedSeq[RDD[(Variant, Variant)]] =
     for (i <- regions.indices; j <- i until regions.length
-         if toFarAway(regions(i), regions(j), maxDistance.value)) yield {
+         if distanceFilter(regions(i), regions(j), maxDistance.value)) yield {
       val same = i == j
       val rdd = regionsRdds(i)
         .union(regionsRdds(j))
@@ -116,17 +119,18 @@ object DigenicSearch extends ToolCommand[Args] {
       rdd.mapPartitions { records =>
         val list1 = records.next()
         val list2 = records.next()
-        (for {
+        for {
           v1 <- list1.zipWithIndex.toIterator
           v2 <- list2.zipWithIndex
           if !same || v1._2 < v2._2
         } yield {
           val sorted = List(v1._1, v2._1).sortBy(v => (v.contig, v.pos))
           (sorted(0), sorted(1))
-        })
+        }
       }
     }
 
+  /** Write output to a single file */
   def writeOutput(rdd: RDD[(Variant, Variant)], outputFile: File): Unit = {
     val writer = new PrintWriter(outputFile)
     rdd
@@ -141,9 +145,10 @@ object DigenicSearch extends ToolCommand[Args] {
     writer.close()
   }
 
-  def toFarAway(list1: List[Region],
-                list2: List[Region],
-                maxDistance: Option[Long]): Boolean = {
+  /** This filters region combinations when maxDistance is set */
+  def distanceFilter(list1: List[Region],
+                     list2: List[Region],
+                     maxDistance: Option[Long]): Boolean = {
     maxDistance match {
       case Some(distance) =>
         list1.exists(r1 =>
@@ -153,7 +158,10 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
-  def toFarAway(v1: Variant, v2: Variant, maxDistance: Option[Long]): Boolean = {
+  /** This returns false is the variants are to far a way */
+  def distanceFilter(v1: Variant,
+                     v2: Variant,
+                     maxDistance: Option[Long]): Boolean = {
     maxDistance match {
       case Some(_) if v1.contig != v2.contig => false
       case Some(distance) => (v1.pos - v2.pos).abs <= distance
@@ -161,12 +169,33 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
-  def toFarAway(
+  /** This filters when maxDistance is set */
+  def distanceFilter(
       rdd: RDD[(Variant, Variant)],
       maxDistance: Broadcast[Option[Long]]): RDD[(Variant, Variant)] = {
-    rdd.filter { case (v1, v2) => toFarAway(v1, v2, maxDistance.value) }
+    rdd.filter { case (v1, v2) => distanceFilter(v1, v2, maxDistance.value) }
   }
 
+  /** This filters by looking only at a single variants,
+    * this reduces the number of combinations, this step is only there to improve performance */
+  def singleFilter(
+      v: Variant,
+      singleFilters: Broadcast[List[(String, Double => Boolean)]]): Boolean = {
+    singleFilters.value.isEmpty ||
+    singleFilters.value.forall { c =>
+      v.annotations.find(_._1 == c._1).get._2.forall(c._2)
+    }
+  }
+
+  /**
+    * Load multiple regions as a single chunk into spark
+    * @param regions Regions to load
+    * @param inputFiles Files to read
+    * @param samples Sample ID's
+    * @param annotations Info fields to read
+    * @param sc Spark context to load variants
+    * @return
+    */
   def loadRegions(regions: Array[List[Region]],
                   inputFiles: Broadcast[List[File]],
                   samples: Broadcast[Array[String]],
@@ -187,15 +216,14 @@ object DigenicSearch extends ToolCommand[Args] {
       .toMap
   }
 
-  def singleFilter(
-      v: Variant,
-      singleFilters: Broadcast[List[(String, Double => Boolean)]]): Boolean = {
-    singleFilters.value.isEmpty ||
-    singleFilters.value.forall { c =>
-      v.annotations.find(_._1 == c._1).get._2.forall(c._2)
-    }
-  }
-
+  /**
+    * This method will return a iterator of [[Variant]]
+    * @param inputReaders Vcf input readers
+    * @param region Single regions to load
+    * @param samples Samples ID's that should be found
+    * @param annotationsFields Info fields that need to be kept, the rest is not loaden into memory
+    * @return
+    */
   def loadRegion(
       inputReaders: List[VCFFileReader],
       region: Region,
