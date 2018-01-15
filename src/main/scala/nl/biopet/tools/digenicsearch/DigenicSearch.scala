@@ -60,13 +60,13 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val annotations: Broadcast[Set[String]] = sc.broadcast(
       cmdArgs.singleAnnotationFilter
-        .map(_._1)
-        .toSet ++ cmdArgs.pairAnnotationFilter.map(_._1).toSet)
+        .map(_.key)
+        .toSet ++ cmdArgs.pairAnnotationFilter.map(_.key).toSet)
 
     val maxDistance = sc.broadcast(cmdArgs.maxDistance)
-    val singleFilters: Broadcast[List[(String, Double => Boolean)]] =
+    val singleFilters: Broadcast[List[AnnotationFilter]] =
       sc.broadcast(cmdArgs.singleAnnotationFilter)
-    val pairFilters: Broadcast[List[(String, Double => Boolean)]] =
+    val pairFilters: Broadcast[List[AnnotationFilter]] =
       sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
     val regions: Array[List[Region]] = generateRegions(cmdArgs).toArray
@@ -90,17 +90,18 @@ object DigenicSearch extends ToolCommand[Args] {
   /** This filters if 1 of the 2 variants returns true */
   def pairedFilter(v1: Variant,
                    v2: Variant,
-                   pairFilters: List[(String, Double => Boolean)]): Boolean = {
+                   pairFilters: List[AnnotationFilter]): Boolean = {
     val list = List(v1, v2)
     pairFilters.isEmpty ||
     pairFilters.forall { c =>
-      list.exists(v => v.annotations.find(_._1 == c._1).get._2.forall(c._2))
+      list.exists(v =>
+        v.annotations.find(_._1 == c.key).get._2.forall(c.method))
     }
   }
 
   /** This filters if 1 of the 2 variants returns true */
   def pairedFilter(rdd: RDD[(Variant, Variant)],
-                   pairFilters: Broadcast[List[(String, Double => Boolean)]])
+                   pairFilters: Broadcast[List[AnnotationFilter]])
     : RDD[(Variant, Variant)] = {
     rdd.filter { case (v1, v2) => pairedFilter(v1, v2, pairFilters.value) }
   }
@@ -180,10 +181,10 @@ object DigenicSearch extends ToolCommand[Args] {
     * this reduces the number of combinations, this step is only there to improve performance */
   def singleFilter(
       v: Variant,
-      singleFilters: Broadcast[List[(String, Double => Boolean)]]): Boolean = {
+      singleFilters: Broadcast[List[AnnotationFilter]]): Boolean = {
     singleFilters.value.isEmpty ||
     singleFilters.value.forall { c =>
-      v.annotations.find(_._1 == c._1).get._2.forall(c._2)
+      v.annotations.find(_._1 == c.key).get._2.forall(c.method)
     }
   }
 
@@ -259,11 +260,16 @@ object DigenicSearch extends ToolCommand[Args] {
             "Multiple reference alleles found")
         } else allAlleles.map(_.toString).toArray
         val genotypes = samples.value.map { sampleId =>
-          val bla = records.flatMap(x => Option(x.getGenotype(sampleId)))
-          val g = bla.head.getAlleles
-            .map(x => alleles.indexOf(x.toString).toShort)
-            .toArray
-          Genotype(g.toList, bla.head.getDP, bla.head.getDP)
+          val genotypes = records.flatMap(x => Option(x.getGenotype(sampleId)))
+          val g = genotypes.headOption match {
+            case Some(x) =>
+              x.getAlleles
+                .map(x => alleles.indexOf(x.toString).toShort)
+            case _ =>
+              throw new IllegalStateException(
+                s"Sample '$sampleId' not found in $records")
+          }
+          Genotype(g.toList, genotypes.head.getDP, genotypes.head.getDP)
         }
         Variant(region.contig,
                 position,

@@ -32,6 +32,8 @@ package object digenicsearch {
     }
   }
 
+  case class AnnotationFilter(key: String, method: Double => Boolean)
+
   case class Variant(contig: String,
                      pos: Int,
                      alleles: List[String],

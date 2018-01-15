@@ -28,16 +28,18 @@ import nl.biopet.utils.tool.{AbstractOptParser, ToolCommand}
 class ArgsParser(toolCommand: ToolCommand[Args])
     extends AbstractOptParser[Args](toolCommand) {
 
-  def parseAnnotationFilter(arg: String): (String, Double => Boolean) = {
-    if (arg.contains(">=")) {
-      val split = arg.split(">=", 2)
-      (split(0), _ >= split(1).toDouble)
-    } else if (arg.contains("<=")) {
-      val split = arg.split("<=", 2)
-      (split(0), _ <= split(1).toDouble)
-    } else
-      throw new IllegalArgumentException(
-        "No method found, possible methods: >=, <=")
+  def parseAnnotationFilter(arg: String): AnnotationFilter = {
+    arg match {
+      case a if a.contains(">=") =>
+        val split = arg.split(">=", 2)
+        AnnotationFilter(split(0), _ >= split(1).toDouble)
+      case a if a.contains("<=") =>
+        val split = arg.split("<=", 2)
+        AnnotationFilter(split(0), _ <= split(1).toDouble)
+      case _ =>
+        throw new IllegalArgumentException(
+          "No method found, possible methods: >=, <=")
+    }
   }
 
   opt[File]('i', "inputFile")
@@ -86,9 +88,4 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[String]("sparkMaster")
     .action((x, c) => c.copy(sparkMaster = Some(x)))
     .text("Spark master, default to local[1]")
-  opt[(String, String)]("sparkConfigValue")
-    .unbounded()
-    .action((x, c) =>
-      c.copy(sparkConfigValues = c.sparkConfigValues + (x._1 -> x._2)))
-    .text(s"Add values to the spark config")
 }
