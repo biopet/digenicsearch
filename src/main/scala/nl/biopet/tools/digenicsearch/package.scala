@@ -34,11 +34,12 @@ package object digenicsearch {
 
   case class AnnotationFilter(key: String, method: Double => Boolean)
 
+  case class AnnotationValue(key: String, value: List[Double])
   case class Variant(contig: String,
                      pos: Int,
                      alleles: List[String],
                      genotypes: List[Genotype],
-                     annotations: List[(String, List[Double])] = List())
+                     annotations: List[AnnotationValue] = List())
 
   case class Genotype(alleles: List[Short], dp: Int, gq: Int)
 

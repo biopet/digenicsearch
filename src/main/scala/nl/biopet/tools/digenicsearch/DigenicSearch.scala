@@ -95,7 +95,7 @@ object DigenicSearch extends ToolCommand[Args] {
     pairFilters.isEmpty ||
     pairFilters.forall { c =>
       list.exists(v =>
-        v.annotations.find(_._1 == c.key).get._2.forall(c.method))
+        v.annotations.find(_.key == c.key).flatMap(_.value).forall(c.method))
     }
   }
 
@@ -121,11 +121,11 @@ object DigenicSearch extends ToolCommand[Args] {
         val list1 = records.next()
         val list2 = records.next()
         for {
-          v1 <- list1.zipWithIndex.toIterator
-          v2 <- list2.zipWithIndex
-          if !same || v1._2 < v2._2
+          (v1, id1) <- list1.zipWithIndex.toIterator
+          (v2, id2) <- list2.zipWithIndex
+          if !same || id1 < id2
         } yield {
-          val sorted = List(v1._1, v2._1).sortBy(v => (v.contig, v.pos))
+          val sorted = List(v1, v2).sortBy(v => (v.contig, v.pos))
           (sorted(0), sorted(1))
         }
       }
@@ -154,7 +154,10 @@ object DigenicSearch extends ToolCommand[Args] {
       case Some(distance) =>
         list1.exists(r1 =>
           list2.exists(r2 =>
-            r1.contig == r2.contig && r1.distance(r2).get <= distance))
+            r1.distance(r2) match {
+              case Some(x) => x <= distance
+              case _ => false
+          }))
       case _ => true
     }
   }
@@ -184,7 +187,7 @@ object DigenicSearch extends ToolCommand[Args] {
       singleFilters: Broadcast[List[AnnotationFilter]]): Boolean = {
     singleFilters.value.isEmpty ||
     singleFilters.value.forall { c =>
-      v.annotations.find(_._1 == c.key).get._2.forall(c.method)
+      v.annotations.find(_.key == c.key).flatMap(_.value).forall(c.method)
     }
   }
 
@@ -202,20 +205,19 @@ object DigenicSearch extends ToolCommand[Args] {
                   samples: Broadcast[Array[String]],
                   annotations: Broadcast[Set[String]])(
       implicit sc: SparkContext): Map[Int, RDD[List[Variant]]] = {
-    regions.zipWithIndex
-      .map(
-        r =>
-          r._2 -> sc
-            .parallelize(Seq(r._1), 1)
-            .mapPartitions { it =>
-              val readers = inputFiles.value.map(new VCFFileReader(_))
-              it.map { region =>
-                region
-                  .flatMap(
-                    new LoadRegion(readers, _, samples, annotations).toList)
-              }
-          })
-      .toMap
+    regions.zipWithIndex.map {
+      case (r, idx) =>
+        idx -> sc
+          .parallelize(Seq(r), 1)
+          .mapPartitions { it =>
+            val readers = inputFiles.value.map(new VCFFileReader(_))
+            it.map { region =>
+              region
+                .flatMap(
+                  new LoadRegion(readers, _, samples, annotations).toList)
+            }
+          }
+    }.toMap
   }
 
   /** creates regions to analyse */

@@ -39,11 +39,11 @@ class LoadRegion(inputReaders: List[VCFFileReader],
     val allAlleles = records.flatMap(_.getAlleles)
     val refAlleles = allAlleles.filter(_.isReference)
     val annotations = annotationsFields.value.map { field =>
-      field -> records.flatMap { record =>
+      AnnotationValue(field, records.flatMap { record =>
         if (record.hasAttribute(field))
           Some(record.getAttributeAsDouble(field, 0.0))
         else None
-      }
+      })
     }
     val allAllelesString: Array[String] = if (refAlleles.length > 1) {
       throw new UnsupportedOperationException(
