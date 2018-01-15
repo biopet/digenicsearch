@@ -211,73 +211,11 @@ object DigenicSearch extends ToolCommand[Args] {
               val readers = inputFiles.value.map(new VCFFileReader(_))
               it.map { region =>
                 region
-                  .flatMap(loadRegion(readers, _, samples, annotations).toList)
+                  .flatMap(
+                    new LoadRegion(readers, _, samples, annotations).toList)
               }
           })
       .toMap
-  }
-
-  /**
-    * This method will return a iterator of [[Variant]]
-    * @param inputReaders Vcf input readers
-    * @param region Single regions to load
-    * @param samples Samples ID's that should be found
-    * @param annotationsFields Info fields that need to be kept, the rest is not loaden into memory
-    * @return
-    */
-  def loadRegion(
-      inputReaders: List[VCFFileReader],
-      region: Region,
-      samples: Broadcast[Array[String]],
-      annotationsFields: Broadcast[Set[String]]): Iterator[Variant] = {
-    new Iterator[Variant] {
-      protected val iterators: List[BufferedIterator[VariantContext]] =
-        inputReaders
-          .map(
-            vcf.loadRegion(_,
-                           BedRecord(region.contig, region.start, region.end)))
-          .map(_.buffered)
-
-      def hasNext: Boolean = iterators.exists(_.hasNext)
-
-      def next(): Variant = {
-        val position = iterators.filter(_.hasNext).map(_.head.getStart).min
-        val records = iterators
-          .filter(_.hasNext)
-          .filter(_.head.getStart == position)
-          .map(_.next())
-        val allAlleles = records.flatMap(_.getAlleles)
-        val refAlleles = allAlleles.filter(_.isReference)
-        val annotations = annotationsFields.value.map { field =>
-          field -> records.flatMap { record =>
-            if (record.hasAttribute(field))
-              Some(record.getAttributeAsDouble(field, 0.0))
-            else None
-          }
-        }
-        val alleles: Array[String] = if (refAlleles.length > 1) {
-          throw new UnsupportedOperationException(
-            "Multiple reference alleles found")
-        } else allAlleles.map(_.toString).toArray
-        val genotypes = samples.value.map { sampleId =>
-          val genotypes = records.flatMap(x => Option(x.getGenotype(sampleId)))
-          val g = genotypes.headOption match {
-            case Some(x) =>
-              x.getAlleles
-                .map(x => alleles.indexOf(x.toString).toShort)
-            case _ =>
-              throw new IllegalStateException(
-                s"Sample '$sampleId' not found in $records")
-          }
-          Genotype(g.toList, genotypes.head.getDP, genotypes.head.getDP)
-        }
-        Variant(region.contig,
-                position,
-                alleles.toList,
-                genotypes.toList,
-                annotations.toList)
-      }
-    }
   }
 
   /** creates regions to analyse */
