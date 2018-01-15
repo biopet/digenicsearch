@@ -23,9 +23,9 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.{File, PrintWriter}
 
-import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
-import nl.biopet.utils.ngs.intervals.{BedRecord, BedRecordList}
+import nl.biopet.utils.ngs.intervals.BedRecordList
+import nl.biopet.utils.ngs.ped.PedigreeFile
 import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
 import org.apache.spark.broadcast.Broadcast
@@ -35,8 +35,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import scala.collection.JavaConversions._
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object DigenicSearch extends ToolCommand[Args] {
@@ -53,10 +51,17 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
+    val pedigree: Broadcast[PedigreeFile] =
+      sc.broadcast(cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _))
+
     val samples =
       sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
     require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
             "Duplicated samples detected")
+    samples.value.foreach(
+      id =>
+        require(pedigree.value.samples.contains(id),
+                s"Sample '$id' not found in ped files"))
 
     val annotations: Broadcast[Set[String]] = sc.broadcast(
       cmdArgs.singleAnnotationFilter
@@ -262,7 +267,9 @@ object DigenicSearch extends ToolCommand[Args] {
                  "-o",
                  "<output dir>",
                  "-R",
-                 "<reference fasta>")}
+                 "<reference fasta>",
+                 "-p",
+                 "<ped file")}
       |
       |A run on limited locations:
       |${example("-i",
@@ -272,6 +279,8 @@ object DigenicSearch extends ToolCommand[Args] {
                  "-R",
                  "<reference fasta>",
                  "--regions",
-                 "<bed file>")}
+                 "<bed file>",
+                 "-p",
+                 "<ped file")}
     """.stripMargin
 }
