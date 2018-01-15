@@ -77,6 +77,18 @@ class ArgsParser(toolCommand: ToolCommand[Args])
             x))
     }
     .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
+  opt[Double]("singleAffectedFraction") action { (x, c) =>
+    c.copy(singleAffectedFraction = x)
+  }
+  opt[Double]("pairAffectedFraction") action { (x, c) =>
+    c.copy(pairAffectedFraction = x)
+  }
+  opt[Double]("singleUnaffectedFraction") action { (x, c) =>
+    c.copy(singleUnaffectedFraction = x)
+  }
+  opt[Double]("pairUnaffectedFraction") action { (x, c) =>
+    c.copy(pairUnaffectedFraction = x)
+  }
   opt[Long]("maxDistance") action { (x, c) =>
     c.copy(maxDistance = Some(x))
   } text "maxDistance in base pairs. This option will make the assumption that both variants are on the same contig"
