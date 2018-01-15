@@ -51,13 +51,16 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
-    val pedigree: Broadcast[PedigreeFile] =
-      sc.broadcast(cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _))
-
     val samples =
       sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
     require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
             "Duplicated samples detected")
+
+    val pedigree: Broadcast[PedigreeFile] = {
+      val pedSamples = cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _)
+      sc.broadcast(new PedigreeFile(pedSamples.samples.filter(s => samples.value.contains(s._1))))
+    }
+
     samples.value.foreach(
       id =>
         require(pedigree.value.samples.contains(id),
