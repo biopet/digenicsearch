@@ -60,9 +60,10 @@ object DigenicSearch extends ToolCommand[Args] {
       val pedSamples =
         cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _)
       sc.broadcast(
-        PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter(s =>
-                            samples.value.contains(s._1))),
-                          samples.value))
+        PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter {
+          case (s, _) =>
+            samples.value.contains(s)
+        }), samples.value))
     }
 
     samples.value.foreach(
@@ -81,7 +82,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val pairFilters: Broadcast[List[AnnotationFilter]] =
       sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
-    val fractions = sc.broadcast(cmdArgs.fractions)
+    val fractionsCutoff = sc.broadcast(cmdArgs.fractions)
 
     val regions: Array[List[Region]] = generateRegions(cmdArgs).toArray
     val regionsRdds: Map[Int, RDD[List[Variant]]] =
@@ -91,7 +92,7 @@ object DigenicSearch extends ToolCommand[Args] {
             .map(
               _.filter(singleAnnotationFilter(_, singleFilters))
                 .filter(v =>
-                  fractions.value
+                  fractionsCutoff.value
                     .singleFractionFilter(v, pedigree.value)))
             .cache()
       }
@@ -99,7 +100,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val combinations = createCombinations(regionsRdds, regions, maxDistance)
       .map(distanceFilter(_, maxDistance))
       .map(pairedFilter(_, pairFilters))
-      .map(pairFractionFilter(_, fractions, samples, pedigree))
+      .map(pairFractionFilter(_, fractionsCutoff, samples, pedigree))
 
     val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     writeOutput(sc.union(combinations), outputFile)
@@ -111,12 +112,12 @@ object DigenicSearch extends ToolCommand[Args] {
   /** This will filter on fractions */
   def pairFractionFilter(
       rdd: RDD[(Variant, Variant)],
-      fractions: Broadcast[Fractions],
+      fractionsCutoffs: Broadcast[FractionsCutoffs],
       samples: Broadcast[Array[String]],
       pedigree: Broadcast[PedigreeFileArray]): RDD[(Variant, Variant)] = {
     rdd.filter {
       case (v1, v2) =>
-        fractions.value.pairFractionFilter(v1, v2, pedigree.value)
+        fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
     }
   }
 

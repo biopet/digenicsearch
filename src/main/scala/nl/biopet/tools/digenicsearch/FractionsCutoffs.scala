@@ -21,29 +21,29 @@
 
 package nl.biopet.tools.digenicsearch
 
-case class Fractions(singleAffectedFraction: Double = 1.0,
-                     pairAffectedFraction: Double = 1.0,
-                     singleUnaffectedFraction: Double = 0,
-                     pairUnaffectedFraction: Double = 0) {
+case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
+                            pairAffectedFraction: Double = 1.0,
+                            singleUnaffectedFraction: Double = 0,
+                            pairUnaffectedFraction: Double = 0) {
 
   def singleFractionFilter(variant: Variant,
                            pedigree: PedigreeFileArray): Boolean = {
-    val result = Fractions.getFraction(variant, pedigree)
+    val result = FractionsCutoffs.getFraction(variant, pedigree)
     result.affected >= singleAffectedFraction && result.unaffected < singleUnaffectedFraction
   }
 
   def pairFractionFilter(v1: Variant,
                          v2: Variant,
                          pedigree: PedigreeFileArray): Boolean = {
-    val result1 = Fractions.getFraction(v1, pedigree)
-    val result2 = Fractions.getFraction(v2, pedigree)
+    val result1 = FractionsCutoffs.getFraction(v1, pedigree)
+    val result2 = FractionsCutoffs.getFraction(v2, pedigree)
 
     (result1.affected >= pairAffectedFraction && result1.unaffected < pairUnaffectedFraction) ||
     (result2.affected >= pairAffectedFraction && result2.unaffected < pairUnaffectedFraction)
   }
 }
 
-object Fractions {
+object FractionsCutoffs {
 
   protected case class Result(unaffected: Double, affected: Double)
 
