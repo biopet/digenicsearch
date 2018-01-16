@@ -22,8 +22,8 @@ class DigenicSearchTest extends ToolTest[Args] {
       outputDir.getAbsolutePath,
       "-i",
       resourcePath("/wgs2.vcf.gz"),
-//      "--pairAnnotationFilter",
-//      "DP>=10",
+      "-p",
+      resourcePath("/pedigree.ped"),
       "--binSize", "1000", "--maxDistance", "999"))
   }
 }
