@@ -21,8 +21,6 @@
 
 package nl.biopet.tools.digenicsearch
 
-import nl.biopet.utils.ngs.ped.PedigreeFile
-
 case class Fractions(singleAffectedFraction: Double = 1.0,
                      pairAffectedFraction: Double = 1.0,
                      singleUnaffectedFraction: Double = 0,
