@@ -27,7 +27,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped")))
+      resourcePath("/wgs2.ped")))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
   }
@@ -42,7 +42,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped")))
+      resourcePath("/wgs2.ped")))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 3
   }
@@ -57,7 +57,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--singleAnnotationFilter", "DP>=1"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 6
@@ -69,7 +69,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--singleAnnotationFilter", "DP<=1"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 1
@@ -81,7 +81,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--singleAnnotationFilter", "DP>=2"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 3
@@ -97,7 +97,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--pairAnnotationFilter", "DP>=1"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
@@ -109,7 +109,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--pairAnnotationFilter", "DP>=2"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 9
@@ -125,7 +125,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--maxDistance", "999"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 4
@@ -137,9 +137,41 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/pedigree.ped"),
+      resourcePath("/wgs2.ped"),
       "--maxDistance", "1000"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 7
+  }
+
+  @Test
+  def testWrongPed(): Unit = {
+    val outputDir = Files.createTempDir()
+    intercept[IllegalArgumentException] {
+      DigenicSearch.main(Array("-R",
+        resourcePath("/reference.fasta"),
+        "-o",
+        outputDir.getAbsolutePath,
+        "-i",
+        resourcePath("/wgsBoth.vcf.gz"),
+        "-p",
+        resourcePath("/wgs2.ped")))
+    }.getMessage shouldBe "requirement failed: Sample 'wgs1' not found in ped files"
+  }
+
+  @Test
+  def testBoth(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      outputDir.getAbsolutePath,
+      "-i",
+      resourcePath("/wgsBoth.vcf.gz"),
+      "-p",
+      resourcePath("/wgs1.ped"),
+      "-p",
+      resourcePath("/wgs2.ped")))
+
+    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
   }
 }

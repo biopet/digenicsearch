@@ -24,7 +24,7 @@ package nl.biopet.tools.digenicsearch
 import nl.biopet.utils.ngs.ped.{PedigreeFile, PedigreeSample, Phenotype}
 
 case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
-  val pedArray: Array[PedigreeSample] = samples.map(pedFile(_))
+  val pedArray: Array[PedigreeSample] = samples.flatMap(pedFile.samples.get)
   val affectedArray: Array[Int] = pedArray.zipWithIndex
     .filter { case (p, _) => p.phenotype == Phenotype.Affected }
     .map { case (_, idx) => idx }

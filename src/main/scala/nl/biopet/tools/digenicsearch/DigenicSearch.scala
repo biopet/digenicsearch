@@ -68,7 +68,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
     samples.value.foreach(
       id =>
-        require(pedigree.value.samples.contains(id),
+        require(pedigree.value.pedFile.samples.contains(id),
                 s"Sample '$id' not found in ped files"))
 
     val annotations: Broadcast[Set[String]] = sc.broadcast(
