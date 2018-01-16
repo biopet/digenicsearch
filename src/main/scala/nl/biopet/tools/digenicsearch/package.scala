@@ -21,8 +21,6 @@
 
 package nl.biopet.tools
 
-import nl.biopet.utils.ngs.ped.PedigreeFile
-
 package object digenicsearch {
   case class Region(contig: String, start: Int, end: Int) {
     def distance(other: Region): Option[Long] = {

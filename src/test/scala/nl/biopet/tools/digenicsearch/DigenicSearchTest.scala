@@ -207,4 +207,19 @@ class DigenicSearchTest extends ToolTest[Args] {
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
   }
 
+  @Test
+  def testMultiChunks(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      outputDir.getAbsolutePath,
+      "-i",
+      resourcePath("/wgs2.vcf.gz"),
+      "-p",
+      resourcePath("/wgs2.ped"),
+      "--binSize", "1000", "--maxDistance", "999"))
+
+    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 4
+  }
 }
