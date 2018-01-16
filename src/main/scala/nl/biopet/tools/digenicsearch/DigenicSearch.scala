@@ -51,14 +51,18 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
-    val samples =
+    val samples: Broadcast[Array[String]] =
       sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
     require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
             "Duplicated samples detected")
 
-    val pedigree: Broadcast[PedigreeFile] = {
-      val pedSamples = cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _)
-      sc.broadcast(new PedigreeFile(pedSamples.samples.filter(s => samples.value.contains(s._1))))
+    val pedigree: Broadcast[PedigreeFileArray] = {
+      val pedSamples =
+        cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _)
+      sc.broadcast(
+        PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter(s =>
+                            samples.value.contains(s._1))),
+                          samples.value))
     }
 
     samples.value.foreach(
@@ -77,22 +81,43 @@ object DigenicSearch extends ToolCommand[Args] {
     val pairFilters: Broadcast[List[AnnotationFilter]] =
       sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
+    val fractions = sc.broadcast(cmdArgs.fractions)
+
     val regions: Array[List[Region]] = generateRegions(cmdArgs).toArray
     val regionsRdds: Map[Int, RDD[List[Variant]]] =
       loadRegions(regions, inputFiles, samples, annotations).map {
         case (id, rdd) =>
-          (id, rdd.map(_.filter(singleFilter(_, singleFilters))).cache())
+          id -> rdd
+            .map(
+              _.filter(singleAnnotationFilter(_, singleFilters))
+                .filter(v =>
+                  fractions.value
+                    .singleFractionFilter(v, pedigree.value)))
+            .cache()
       }
 
     val combinations = createCombinations(regionsRdds, regions, maxDistance)
       .map(distanceFilter(_, maxDistance))
       .map(pairedFilter(_, pairFilters))
+      .map(pairFractionFilter(_, fractions, samples, pedigree))
 
     val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     writeOutput(sc.union(combinations), outputFile)
 
     sc.stop()
     logger.info("Done")
+  }
+
+  /** This will filter on fractions */
+  def pairFractionFilter(
+      rdd: RDD[(Variant, Variant)],
+      fractions: Broadcast[Fractions],
+      samples: Broadcast[Array[String]],
+      pedigree: Broadcast[PedigreeFileArray]): RDD[(Variant, Variant)] = {
+    rdd.filter {
+      case (v1, v2) =>
+        fractions.value.pairFractionFilter(v1, v2, pedigree.value)
+    }
   }
 
   /** This filters if 1 of the 2 variants returns true */
@@ -195,7 +220,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
   /** This filters by looking only at a single variants,
     * this reduces the number of combinations, this step is only there to improve performance */
-  def singleFilter(
+  def singleAnnotationFilter(
       v: Variant,
       singleFilters: Broadcast[List[AnnotationFilter]]): Boolean = {
     singleFilters.value.isEmpty ||

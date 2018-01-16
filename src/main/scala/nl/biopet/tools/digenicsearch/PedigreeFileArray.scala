@@ -19,32 +19,16 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package nl.biopet.tools
+package nl.biopet.tools.digenicsearch
 
-import nl.biopet.utils.ngs.ped.PedigreeFile
+import nl.biopet.utils.ngs.ped.{PedigreeFile, PedigreeSample, Phenotype}
 
-package object digenicsearch {
-  case class Region(contig: String, start: Int, end: Int) {
-    def distance(other: Region): Option[Long] = {
-      if (this.contig == other.contig) {
-        if (this.start > other.end) Some(this.start - other.end)
-        else if (other.start > this.end) Some(other.start - this.end)
-        else Some(0)
-      } else None
-    }
-  }
-
-  case class AnnotationFilter(key: String, method: Double => Boolean)
-
-  case class AnnotationValue(key: String, value: List[Double])
-  case class Variant(contig: String,
-                     pos: Int,
-                     alleles: List[String],
-                     genotypes: List[Genotype],
-                     annotations: List[AnnotationValue] = List())
-
-  case class Genotype(alleles: List[Short], dp: Int, gq: Int) {
-    def isReference: Boolean = alleles.forall(_ == 0)
-  }
-
+case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
+  val pedArray: Array[PedigreeSample] = samples.map(pedFile(_))
+  val affectedArray: Array[Int] = pedArray.zipWithIndex
+    .filter(_._1.phenotype == Phenotype.Affected)
+    .map(_._2)
+  val unaffectedArray: Array[Int] = pedArray.zipWithIndex
+    .filter(_._1.phenotype == Phenotype.Unaffected)
+    .map(_._2)
 }
