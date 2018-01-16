@@ -28,20 +28,6 @@ import nl.biopet.utils.tool.{AbstractOptParser, ToolCommand}
 class ArgsParser(toolCommand: ToolCommand[Args])
     extends AbstractOptParser[Args](toolCommand) {
 
-  def parseAnnotationFilter(arg: String): AnnotationFilter = {
-    arg match {
-      case a if a.contains(">=") =>
-        val split = arg.split(">=", 2)
-        AnnotationFilter(split(0), _ >= split(1).toDouble)
-      case a if a.contains("<=") =>
-        val split = arg.split("<=", 2)
-        AnnotationFilter(split(0), _ <= split(1).toDouble)
-      case _ =>
-        throw new IllegalArgumentException(
-          "No method found, possible methods: >=, <=")
-    }
-  }
-
   opt[File]('i', "inputFile")
     .required()
     .action((x, c) => c.copy(inputFiles = x :: c.inputFiles))
@@ -65,16 +51,16 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .action {
       case (x, c) =>
         c.copy(
-          singleAnnotationFilter = c.singleAnnotationFilter :+ parseAnnotationFilter(
-            x))
+          singleAnnotationFilter = c.singleAnnotationFilter :+ ArgsParser
+            .parseAnnotationFilter(x))
     }
     .text("Filter on single variant")
   opt[String]("pairAnnotationFilter")
     .action {
       case (x, c) =>
         c.copy(
-          pairAnnotationFilter = c.pairAnnotationFilter :+ parseAnnotationFilter(
-            x))
+          pairAnnotationFilter = c.pairAnnotationFilter :+ ArgsParser
+            .parseAnnotationFilter(x))
     }
     .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
   opt[Double]("singleAffectedFraction") action { (x, c) =>
@@ -101,4 +87,20 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[String]("sparkMaster")
     .action((x, c) => c.copy(sparkMaster = Some(x)))
     .text("Spark master, default to local[1]")
+}
+
+object ArgsParser {
+  def parseAnnotationFilter(arg: String): AnnotationFilter = {
+    arg match {
+      case a if a.contains(">=") =>
+        val split = arg.split(">=", 2)
+        AnnotationFilter(split(0), _ >= split(1).toDouble)
+      case a if a.contains("<=") =>
+        val split = arg.split("<=", 2)
+        AnnotationFilter(split(0), _ <= split(1).toDouble)
+      case _ =>
+        throw new IllegalArgumentException(
+          "No method found, possible methods: >=, <=")
+    }
+  }
 }

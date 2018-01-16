@@ -70,6 +70,18 @@ class DigenicSearchTest extends ToolTest[Args] {
       resourcePath("/wgs2.vcf.gz"),
       "-p",
       resourcePath("/pedigree.ped"),
+      "--singleAnnotationFilter", "DP<=1"))
+
+    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 1
+
+    DigenicSearch.main(Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      outputDir.getAbsolutePath,
+      "-i",
+      resourcePath("/wgs2.vcf.gz"),
+      "-p",
+      resourcePath("/pedigree.ped"),
       "--singleAnnotationFilter", "DP>=2"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 3
