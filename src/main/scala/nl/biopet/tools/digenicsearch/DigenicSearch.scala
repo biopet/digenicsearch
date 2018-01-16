@@ -93,7 +93,8 @@ object DigenicSearch extends ToolCommand[Args] {
               _.filter(singleAnnotationFilter(_, singleFilters))
                 .filter(v =>
                   fractionsCutoff.value
-                    .singleFractionFilter(v, pedigree.value)))
+                    .singleFractionFilter(v, pedigree.value))
+            )
             .cache()
       }
 

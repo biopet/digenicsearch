@@ -76,7 +76,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       val (genotype, alleles) = genotypes.headOption match {
         case _ if genotypes.length > 1 =>
           throw new IllegalStateException(
-            s"Sample '$sampleId' found in mutliple times in: $records")
+            s"Sample '$sampleId' found in multiple times in: $records")
         case Some(x) =>
           (x,
            x.getAlleles

@@ -29,7 +29,7 @@ case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
   def singleFractionFilter(variant: Variant,
                            pedigree: PedigreeFileArray): Boolean = {
     val result = FractionsCutoffs.getFraction(variant, pedigree)
-    result.affected >= singleAffectedFraction && result.unaffected < singleUnaffectedFraction
+    result.affected >= singleAffectedFraction && result.unaffected <= singleUnaffectedFraction
   }
 
   def pairFractionFilter(v1: Variant,
@@ -38,8 +38,8 @@ case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
     val result1 = FractionsCutoffs.getFraction(v1, pedigree)
     val result2 = FractionsCutoffs.getFraction(v2, pedigree)
 
-    (result1.affected >= pairAffectedFraction && result1.unaffected < pairUnaffectedFraction) ||
-    (result2.affected >= pairAffectedFraction && result2.unaffected < pairUnaffectedFraction)
+    (result1.affected >= pairAffectedFraction && result1.unaffected <= pairUnaffectedFraction) ||
+    (result2.affected >= pairAffectedFraction && result2.unaffected <= pairUnaffectedFraction)
   }
 }
 
@@ -51,14 +51,17 @@ object FractionsCutoffs {
     val affectedGenotypes = pedigree.affectedArray.map(variant.genotypes)
     val unaffectedGenotypes = pedigree.unaffectedArray.map(variant.genotypes)
 
-    Result(
-      unaffectedGenotypes
-        .count(!_.isReference)
-        .toDouble / unaffectedGenotypes.length,
-      affectedGenotypes
-        .count(!_.isReference)
-        .toDouble / affectedGenotypes.length
-    )
+    val unaffectedFraction =
+      if (unaffectedGenotypes.nonEmpty)
+        unaffectedGenotypes
+          .count(!_.isReference)
+          .toDouble / unaffectedGenotypes.length
+      else 0.0
+    val affectedFraction = affectedGenotypes
+      .count(!_.isReference)
+      .toDouble / affectedGenotypes.length
+
+    Result(unaffectedFraction, affectedFraction)
   }
 
 }
