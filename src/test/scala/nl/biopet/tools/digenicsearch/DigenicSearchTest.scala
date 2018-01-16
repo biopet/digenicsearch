@@ -174,4 +174,37 @@ class DigenicSearchTest extends ToolTest[Args] {
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
   }
+
+  @Test
+  def testBothAffected(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      outputDir.getAbsolutePath,
+      "-i",
+      resourcePath("/wgsBoth.vcf.gz"),
+      "-p",
+      resourcePath("/wgs1-affected.ped"),
+      "-p",
+      resourcePath("/wgs2.ped")))
+
+    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 0
+
+    DigenicSearch.main(Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      outputDir.getAbsolutePath,
+      "-i",
+      resourcePath("/wgsBoth.vcf.gz"),
+      "-p",
+      resourcePath("/wgs1-affected.ped"),
+      "-p",
+      resourcePath("/wgs2.ped"),
+      "--singleAffectedFraction", "0.5",
+      "--pairAffectedFraction", "0.5"))
+
+    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
+  }
+
 }
