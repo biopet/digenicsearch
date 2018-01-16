@@ -21,17 +21,14 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
+import nl.biopet.utils.ngs.ped.{PedigreeFile, PedigreeSample, Phenotype}
 
-case class Args(inputFiles: List[File] = Nil,
-                outputDir: File = null,
-                reference: File = null,
-                regions: Option[File] = None,
-                pedFiles: List[File] = Nil,
-                singleAnnotationFilter: List[AnnotationFilter] = Nil,
-                pairAnnotationFilter: List[AnnotationFilter] = Nil,
-                fractions: FractionsCutoffs = FractionsCutoffs(),
-                maxDistance: Option[Long] = None,
-                binSize: Int = 10000000,
-                maxContigsInSingleJob: Int = 250,
-                sparkMaster: Option[String] = None)
+case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
+  val pedArray: Array[PedigreeSample] = samples.flatMap(pedFile.samples.get)
+  val affectedArray: Array[Int] = pedArray.zipWithIndex
+    .filter { case (p, _) => p.phenotype == Phenotype.Affected }
+    .map { case (_, idx) => idx }
+  val unaffectedArray: Array[Int] = pedArray.zipWithIndex
+    .filter { case (p, _) => p.phenotype == Phenotype.Unaffected }
+    .map { case (_, idx) => idx }
+}

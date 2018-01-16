@@ -23,9 +23,9 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.{File, PrintWriter}
 
-import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
-import nl.biopet.utils.ngs.intervals.{BedRecord, BedRecordList}
+import nl.biopet.utils.ngs.intervals.BedRecordList
+import nl.biopet.utils.ngs.ped.PedigreeFile
 import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
 import org.apache.spark.broadcast.Broadcast
@@ -35,8 +35,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import scala.collection.JavaConversions._
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object DigenicSearch extends ToolCommand[Args] {
@@ -53,10 +51,25 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
-    val samples =
+    val samples: Broadcast[Array[String]] =
       sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
     require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
             "Duplicated samples detected")
+
+    val pedigree: Broadcast[PedigreeFileArray] = {
+      val pedSamples =
+        cmdArgs.pedFiles.map(PedigreeFile.fromFile).reduce(_ + _)
+      sc.broadcast(
+        PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter {
+          case (s, _) =>
+            samples.value.contains(s)
+        }), samples.value))
+    }
+
+    samples.value.foreach(
+      id =>
+        require(pedigree.value.pedFile.samples.contains(id),
+                s"Sample '$id' not found in ped files"))
 
     val annotations: Broadcast[Set[String]] = sc.broadcast(
       cmdArgs.singleAnnotationFilter
@@ -69,22 +82,44 @@ object DigenicSearch extends ToolCommand[Args] {
     val pairFilters: Broadcast[List[AnnotationFilter]] =
       sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
+    val fractionsCutoff = sc.broadcast(cmdArgs.fractions)
+
     val regions: Array[List[Region]] = generateRegions(cmdArgs).toArray
     val regionsRdds: Map[Int, RDD[List[Variant]]] =
       loadRegions(regions, inputFiles, samples, annotations).map {
         case (id, rdd) =>
-          (id, rdd.map(_.filter(singleFilter(_, singleFilters))).cache())
+          id -> rdd
+            .map(
+              _.filter(singleAnnotationFilter(_, singleFilters))
+                .filter(v =>
+                  fractionsCutoff.value
+                    .singleFractionFilter(v, pedigree.value))
+            )
+            .cache()
       }
 
     val combinations = createCombinations(regionsRdds, regions, maxDistance)
       .map(distanceFilter(_, maxDistance))
       .map(pairedFilter(_, pairFilters))
+      .map(pairFractionFilter(_, fractionsCutoff, samples, pedigree))
 
     val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     writeOutput(sc.union(combinations), outputFile)
 
     sc.stop()
     logger.info("Done")
+  }
+
+  /** This will filter on fractions */
+  def pairFractionFilter(
+      rdd: RDD[(Variant, Variant)],
+      fractionsCutoffs: Broadcast[FractionsCutoffs],
+      samples: Broadcast[Array[String]],
+      pedigree: Broadcast[PedigreeFileArray]): RDD[(Variant, Variant)] = {
+    rdd.filter {
+      case (v1, v2) =>
+        fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
+    }
   }
 
   /** This filters if 1 of the 2 variants returns true */
@@ -187,7 +222,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
   /** This filters by looking only at a single variants,
     * this reduces the number of combinations, this step is only there to improve performance */
-  def singleFilter(
+  def singleAnnotationFilter(
       v: Variant,
       singleFilters: Broadcast[List[AnnotationFilter]]): Boolean = {
     singleFilters.value.isEmpty ||
@@ -262,7 +297,9 @@ object DigenicSearch extends ToolCommand[Args] {
                  "-o",
                  "<output dir>",
                  "-R",
-                 "<reference fasta>")}
+                 "<reference fasta>",
+                 "-p",
+                 "<ped file")}
       |
       |A run on limited locations:
       |${example("-i",
@@ -272,6 +309,8 @@ object DigenicSearch extends ToolCommand[Args] {
                  "-R",
                  "<reference fasta>",
                  "--regions",
-                 "<bed file>")}
+                 "<bed file>",
+                 "-p",
+                 "<ped file")}
     """.stripMargin
 }

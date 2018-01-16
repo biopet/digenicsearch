@@ -59,6 +59,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       .map(_.next())
     val allAlleles = records.flatMap(_.getAlleles)
     val refAlleles = allAlleles.filter(_.isReference)
+    val altAlleles = allAlleles.filter(!_.isReference)
     val annotations = annotationsFields.value.map { field =>
       AnnotationValue(field, records.flatMap { record =>
         if (record.hasAttribute(field))
@@ -69,13 +70,13 @@ class LoadRegion(inputReaders: List[VCFFileReader],
     val allAllelesString: Array[String] = if (refAlleles.length > 1) {
       throw new UnsupportedOperationException(
         "Multiple reference alleles found")
-    } else allAlleles.map(_.toString).toArray
+    } else (refAlleles ::: altAlleles).map(_.toString).toArray
     val genotypes = samples.value.map { sampleId =>
       val genotypes = records.flatMap(x => Option(x.getGenotype(sampleId)))
       val (genotype, alleles) = genotypes.headOption match {
         case _ if genotypes.length > 1 =>
           throw new IllegalStateException(
-            s"Sample '$sampleId' found in mutliple times in: $records")
+            s"Sample '$sampleId' found in multiple times in: $records")
         case Some(x) =>
           (x,
            x.getAlleles
