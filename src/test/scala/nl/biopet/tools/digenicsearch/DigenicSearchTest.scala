@@ -218,7 +218,8 @@ class DigenicSearchTest extends ToolTest[Args] {
       resourcePath("/wgs2.vcf.gz"),
       "-p",
       resourcePath("/wgs2.ped"),
-      "--binSize", "1000", "--maxDistance", "999"))
+      "--binSize", "1000",
+      "--maxDistance", "999"))
 
     Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 4
   }

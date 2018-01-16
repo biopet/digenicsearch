@@ -22,4 +22,18 @@ class ArgparserTest extends BiopetTest {
       ArgsParser.parseAnnotationFilter("DP++++3")
     }.getMessage shouldBe "No method found, possible methods: >=, <="
   }
+
+  @Test
+  def testMaxContigsInSingleJob(): Unit = {
+    val args = Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      "./",
+      "-i",
+      resourcePath("/wgs2.vcf.gz"),
+      "-p",
+      resourcePath("/wgs2.ped"), "--maxContigsInSingleJob", "300")
+
+    DigenicSearch.cmdArrayToArgs(args).maxContigsInSingleJob shouldBe 300
+  }
 }
