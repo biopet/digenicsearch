@@ -33,6 +33,21 @@ class DigenicSearchTest extends ToolTest[Args] {
   }
 
   @Test
+  def testRegions(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(Array("--regions", resourcePath("/regions.bed"),"-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      outputDir.getAbsolutePath,
+      "-i",
+      resourcePath("/wgs2.vcf.gz"),
+      "-p",
+      resourcePath("/pedigree.ped")))
+
+    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 3
+  }
+
+  @Test
   def testSingleDp(): Unit = {
     val outputDir = Files.createTempDir()
     DigenicSearch.main(Array("-R",
