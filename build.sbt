@@ -16,8 +16,8 @@ libraryDependencies += "com.fasterxml.jackson.module" % "jackson-module-scala_2.
 
 libraryDependencies += "com.github.biopet" %% "spark-utils" % "0.3-SNAPSHOT" changing()
 libraryDependencies += "com.github.biopet" %% "ngs-utils" % "0.3-SNAPSHOT" changing()
-libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.2"
-libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.1" % Test
+libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.3-SNAPSHOT"
+libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.2-SNAPSHOT" % Test
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.2.1" % Provided
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.2.1" % Provided
