@@ -149,12 +149,12 @@ object DigenicSearch extends ToolCommand[Args] {
       } yield {
         ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
       }
-    }.sort("contig1", "contig2", "pos1", "pos2")
+    }.rdd.sortBy(x => (x.contig1, x.contig2, x.pos1, x.pos2)).toDS()
 
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
 
-    println("Total combinations: " + variantCombinations.count())
+    //println("Total combinations: " + variantCombinations.count())
     //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     //writeOutput(variantCombinations, cmdArgs.outputDir)
 
