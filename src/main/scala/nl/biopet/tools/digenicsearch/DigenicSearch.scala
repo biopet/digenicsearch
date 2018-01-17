@@ -127,7 +127,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val indexCombination = createCombinations(regionsRdd, regions, maxDistance)
 
-    val indexCombinationDs = indexCombination.toDS() //.repartition(indexCombination.count.toInt)
+    val indexCombinationDs = indexCombination.toDS()
 
     logger.info("Combination regions done")
 
@@ -139,19 +139,30 @@ object DigenicSearch extends ToolCommand[Args] {
       .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
     val variantCombinations = combination.flatMap { x =>
+      val outputFile = new File(cmdArgs.outputDir, x.i1.idx + File.separator + x.i2.idx + ".tsv")
+      outputFile.getParentFile.mkdirs()
+      val writer = new PrintWriter(outputFile)
       val same = x.i1.idx == x.i2.idx
       var count = 0L
-      for {
-        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-        (v2, id2) <- x.i2.variants.zipWithIndex
-        if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
-          pairedFilter(v1, v2, pairFilters.value) &&
-          fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
-      } yield (v1, v2)
+      try {
+        for {
+          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+          (v2, id2) <- x.i2.variants.zipWithIndex
+          if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
+            pairedFilter(v1, v2, pairFilters.value) &&
+            fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
+        } yield {
+          writer.println(List(v1.contig, v1.pos, v2.contig, v2.pos).mkString("\t"))
+          ((x.i1.idx, x.i2.idx), (v1, v2))
+        }
+      } finally {
+        writer.close()
+      }
     }
 
-    val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
-    writeOutput(variantCombinations, outputFile)
+    variantCombinations.count()
+    //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
+    //writeOutput(variantCombinations, cmdArgs.outputDir)
 
     sc.stop()
     logger.info("Done")
@@ -191,18 +202,25 @@ object DigenicSearch extends ToolCommand[Args] {
   }
 
   /** Write output to a single file */
-  def writeOutput(rdd: Dataset[(Variant, Variant)], outputFile: File): Unit = {
-    val writer = new PrintWriter(outputFile)
-    rdd.rdd
-      .map {
-        case (v1, v2) =>
-          (v1.contig, v1.pos, v2.contig, v2.pos)
-      }
-      .toLocalIterator
-      .foreach {
-        case (c1, p1, c2, p2) => writer.println(s"$c1\t$p1\t$c2\t$p2")
-      }
-    writer.close()
+  def writeOutput(rdd: Dataset[((Int, Int),(Variant, Variant))], outputDir: File): Unit = {
+    val bla = rdd.rdd.groupByKey().map { case ((id1, id2), it) =>
+      val outputFile = new File(outputDir, id1 + File.separator + id2 + ".tsv")
+      outputFile.getParentFile.mkdirs()
+      val writer = new PrintWriter(outputFile)
+      it.foreach { case (v1, v2) => writer.println(List(v1.contig, v1.pos, v2.contig, v2.pos).mkString("\t")) }
+      writer.close()
+    }
+    bla.count()
+//    val writer = new PrintWriter(new File(outputDir, "pairs.tsv"))
+//      rdd.rdd.map {
+//        case ((id1, id2), (v1, v2)) =>
+//          (v1.contig, v1.pos, v2.contig, v2.pos)
+//      }
+//      .toLocalIterator
+//      .foreach {
+//        case (c1, p1, c2, p2) => writer.println(s"$c1\t$p1\t$c2\t$p2")
+//      }
+//    writer.close()
   }
 
   /** This filters region combinations when maxDistance is set */
