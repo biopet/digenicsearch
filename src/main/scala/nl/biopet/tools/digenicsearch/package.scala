@@ -41,6 +41,11 @@ package object digenicsearch {
                      genotypes: List[Genotype],
                      annotations: List[AnnotationValue] = List())
 
+  case class Combination(i1: Int, i2: Int)
+  case class CombinationSingle(i1: IndexedVariants, i2: Int)
+  case class CombinationVariant(i1: IndexedVariants, i2: IndexedVariants)
+  case class IndexedVariants(idx: Int, variants: List[Variant])
+
   case class Genotype(alleles: List[Short], dp: Int, gq: Int) {
     def isReference: Boolean = alleles.forall(_ == 0)
   }

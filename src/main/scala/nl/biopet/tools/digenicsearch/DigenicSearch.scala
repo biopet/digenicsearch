@@ -24,6 +24,7 @@ package nl.biopet.tools.digenicsearch
 import java.io.{File, PrintWriter}
 
 import htsjdk.variant.vcf.VCFFileReader
+import nl.biopet.tools.digenicsearch.DigenicSearch.distanceFilter
 import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.ngs.ped.PedigreeFile
 import nl.biopet.utils.ngs.vcf
@@ -48,6 +49,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val sparkConf: SparkConf =
       new SparkConf(true).setMaster(cmdArgs.sparkMaster.getOrElse("local[1]"))
     val sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
+    import sparkSession.implicits._
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
@@ -84,28 +86,44 @@ object DigenicSearch extends ToolCommand[Args] {
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
     val fractionsCutoff = sc.broadcast(cmdArgs.fractions)
 
-    val regions: Array[List[Region]] = generateRegions(cmdArgs).toArray
-    val regionsRdds: Map[Int, RDD[List[Variant]]] =
-      loadRegions(regions, inputFiles, samples, annotations).map {
-        case (id, rdd) =>
-          id -> rdd
-            .map(
-              _.filter(singleAnnotationFilter(_, singleFilters))
-                .filter(v =>
-                  fractionsCutoff.value
-                    .singleFractionFilter(v, pedigree.value))
-            )
-            .cache()
+    logger.info("Broadcasting done")
+
+    val regions: Broadcast[Array[List[Region]]] =
+      sc.broadcast(generateRegions(cmdArgs).toArray)
+
+    val regionsRdd = sc.parallelize(regions.value.zipWithIndex.map {
+      case (list, idx) => idx -> list
+    }, regions.value.length)
+
+    logger.info("Regions generated")
+
+    val regionsRdds = regionsRdd
+      .map { case (idx, regions) =>
+        loadRegions(idx, regions, inputFiles, samples, annotations)
       }
+      .map { v => v.copy(variants = v.variants.filter(singleAnnotationFilter(_, singleFilters))) }
+      .map {
+        v => v.copy(variants = v.variants.filter(
+          fractionsCutoff.value.singleFractionFilter(_, pedigree.value)))
+      }
+      .toDS().cache()
 
-    val combinations = createCombinations(regionsRdds, regions, maxDistance)
-      .map(distanceFilter(_, maxDistance))
-      .map(pairedFilter(_, pairFilters))
-      .map(pairFractionFilter(_, fractionsCutoff, samples, pedigree))
+    logger.info("Loading done")
 
-    val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
-    writeOutput(sc.union(combinations), outputFile)
+    val c = sc.parallelize(createCombinations(regions.value, maxDistance).toList).toDS()
 
+    val bla = c.joinWith(regionsRdds, c("i1") === regionsRdds("idx"))
+      //.joinWith(regionsRdds, c("i2") === regionsRdds("idx"))
+
+//    val combinations = createCombinations(regionsRdds, regions, maxDistance)
+//      .map(distanceFilter(_, maxDistance))
+//      .map(pairedFilter(_, pairFilters))
+//      .map(pairFractionFilter(_, fractionsCutoff, samples, pedigree))
+//
+//    val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
+//    writeOutput(sc.union(combinations), outputFile)
+
+    println(bla.count())
     sc.stop()
     logger.info("Done")
   }
@@ -144,6 +162,14 @@ object DigenicSearch extends ToolCommand[Args] {
                    pairFilters: Broadcast[List[AnnotationFilter]])
     : RDD[(Variant, Variant)] = {
     rdd.filter { case (v1, v2) => pairedFilter(v1, v2, pairFilters.value) }
+  }
+
+  def createCombinations(regions: Array[List[Region]],
+                         maxDistance: Broadcast[Option[Long]]): Iterator[Combination] = {
+    for (i <- regions.indices.iterator; j <- i until regions.length
+         if distanceFilter(regions(i), regions(j), maxDistance.value)) yield {
+      Combination(i, j)
+    }
   }
 
   /** This created a list of combinations rdds */
@@ -241,27 +267,16 @@ object DigenicSearch extends ToolCommand[Args] {
     * @param inputFiles Files to read
     * @param samples Sample ID's
     * @param annotations Info fields to read
-    * @param sc Spark context to load variants
     * @return
     */
-  def loadRegions(regions: Array[List[Region]],
-                  inputFiles: Broadcast[List[File]],
-                  samples: Broadcast[Array[String]],
-                  annotations: Broadcast[Set[String]])(
-      implicit sc: SparkContext): Map[Int, RDD[List[Variant]]] = {
-    regions.zipWithIndex.map {
-      case (r, idx) =>
-        idx -> sc
-          .parallelize(Seq(r), 1)
-          .mapPartitions { it =>
-            val readers = inputFiles.value.map(new VCFFileReader(_))
-            it.map { region =>
-              region
-                .flatMap(
-                  new LoadRegion(readers, _, samples, annotations).toList)
-            }
-          }
-    }.toMap
+  def loadRegions(
+                 idx: Int,
+      regions: List[Region],
+      inputFiles: Broadcast[List[File]],
+      samples: Broadcast[Array[String]],
+      annotations: Broadcast[Set[String]]): IndexedVariants = {
+    val readers = inputFiles.value.map(new VCFFileReader(_))
+    IndexedVariants(idx, regions.flatMap(new LoadRegion(readers, _, samples, annotations)))
   }
 
   /** creates regions to analyse */
