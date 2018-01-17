@@ -151,12 +151,12 @@ object DigenicSearch extends ToolCommand[Args] {
           v1.affectedFraction.get, v1.unaffectedFraction.get,
           v2.affectedFraction.get, v2.unaffectedFraction.get)
       }
-    }.sort("contig1", "contig2", "pos1", "pos2")
+    }.sort("contig1", "contig2", "pos1", "pos2").cache()
 
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
 
-    //println("Total combinations: " + variantCombinations.count())
+    println("Total combinations: " + variantCombinations.count())
     //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     //writeOutput(variantCombinations, cmdArgs.outputDir)
 
