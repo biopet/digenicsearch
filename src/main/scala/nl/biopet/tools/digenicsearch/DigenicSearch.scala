@@ -117,10 +117,9 @@ object DigenicSearch extends ToolCommand[Args] {
       .toDS()
       .cache()
 
-    println(
-      "Total variants: " + regionsRdds
-        .map(_.variants.length.toLong)
-        .reduce(_ + _))
+    Future(regionsRdds
+      .map(_.variants.length.toLong)
+      .reduce(_ + _)).onSuccess { case x => println("Total variants: " + x) }
 
     logger.info("Rdd loading done")
 
