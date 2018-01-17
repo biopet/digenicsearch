@@ -151,6 +151,9 @@ object DigenicSearch extends ToolCommand[Args] {
       }
     }
 
+    val outputFile = new File(cmdArgs.outputDir, "pairs")
+    variantCombinations.write.parquet(outputFile.getAbsolutePath)
+
     println("Total combinations: " + variantCombinations.count())
     //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     //writeOutput(variantCombinations, cmdArgs.outputDir)
