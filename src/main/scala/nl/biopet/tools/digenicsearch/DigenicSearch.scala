@@ -147,9 +147,11 @@ object DigenicSearch extends ToolCommand[Args] {
           pairedFilter(v1, v2, pairFilters.value) &&
           fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
       } yield {
-        ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
+        ResultLine(v1.contig, v1.pos, v2.contig, v2.pos,
+          v1.affectedFraction.get, v1.unaffectedFraction.get,
+          v2.affectedFraction.get, v2.unaffectedFraction.get)
       }
-    }.rdd.sortBy(x => (x.contig1, x.contig2, x.pos1, x.pos2)).toDS()
+    }.sort("contig1", "contig2", "pos1", "pos2")
 
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
