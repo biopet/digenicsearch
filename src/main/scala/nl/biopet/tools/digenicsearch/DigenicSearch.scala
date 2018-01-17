@@ -149,7 +149,7 @@ object DigenicSearch extends ToolCommand[Args] {
       } yield {
         ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
       }
-    }
+    }.repartition()
 
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
