@@ -24,14 +24,13 @@ package nl.biopet.tools.digenicsearch
 import java.io.{File, PrintWriter}
 
 import htsjdk.variant.vcf.VCFFileReader
-import nl.biopet.tools.digenicsearch.DigenicSearch.distanceFilter
 import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.ngs.ped.PedigreeFile
 import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.duration.Duration
@@ -84,68 +83,78 @@ object DigenicSearch extends ToolCommand[Args] {
     val pairFilters: Broadcast[List[AnnotationFilter]] =
       sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
-    val fractionsCutoff = sc.broadcast(cmdArgs.fractions)
+    val fractionsCutoffs = sc.broadcast(cmdArgs.fractions)
 
     logger.info("Broadcasting done")
 
     val regions: Broadcast[Array[List[Region]]] =
       sc.broadcast(generateRegions(cmdArgs).toArray)
 
-    val regionsRdd: RDD[(Int, List[Region])] = sc.parallelize(regions.value.zipWithIndex.map {
-      case (list, idx) => idx -> list
-    }, regions.value.length)
+    val regionsRdd: RDD[(Int, List[Region])] =
+      sc.parallelize(regions.value.zipWithIndex.map {
+        case (list, idx) => idx -> list
+      }, regions.value.length)
 
     logger.info("Regions generated")
 
     val regionsRdds = regionsRdd
-      .map { case (idx, r) =>
-        loadRegions(idx, r, inputFiles, samples, annotations)
-      }
-      .map { v => v.copy(variants = v.variants.filter(singleAnnotationFilter(_, singleFilters))) }
       .map {
-        v => v.copy(variants = v.variants.filter(
-          fractionsCutoff.value.singleFractionFilter(_, pedigree.value)))
+        case (idx, r) =>
+          loadRegions(idx, r, inputFiles, samples, annotations)
       }
-      .toDS().cache()
+      .map { v =>
+        v.copy(variants =
+          v.variants.filter(singleAnnotationFilter(_, singleFilters)))
+      }
+      .map { v =>
+        v.copy(variants =
+          v.variants.map(FractionsCutoffs.getFraction(_, pedigree.value)))
+      }
+      .map { v =>
+        v.copy(variants = v.variants.filter(
+          fractionsCutoffs.value.singleFractionFilter(_, pedigree.value)))
+      }
+      .toDS()
+      .cache()
+
+    println(
+      "Total variants: " + regionsRdds
+        .map(_.variants.length.toLong)
+        .collect()
+        .sum)
 
     logger.info("Rdd loading done")
 
     val indexCombination = createCombinations(regionsRdd, regions, maxDistance)
 
-    val indexCombinationDs = indexCombination.toDS().repartition(indexCombination.count.toInt)
+    val indexCombinationDs = indexCombination.toDS() //.repartition(indexCombination.count.toInt)
 
     logger.info("Combination regions done")
 
-    val singleCombination = indexCombinationDs.joinWith(regionsRdds, indexCombinationDs("i1") === regionsRdds("idx"))
+    val singleCombination = indexCombinationDs
+      .joinWith(regionsRdds, indexCombinationDs("i1") === regionsRdds("idx"))
       .map { case (c, v) => CombinationSingle(v, c.i2) }
-    val combination = singleCombination.joinWith(regionsRdds, singleCombination("i2") === regionsRdds("idx"))
-        .map { case (c,v) => CombinationVariant(c.i1, v) }
+    val combination = singleCombination
+      .joinWith(regionsRdds, singleCombination("i2") === regionsRdds("idx"))
+      .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
-//    val combinations = createCombinations(regionsRdds, regions, maxDistance)
-//      .map(distanceFilter(_, maxDistance))
-//      .map(pairedFilter(_, pairFilters))
-//      .map(pairFractionFilter(_, fractionsCutoff, samples, pedigree))
-//
-//    val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
-//    writeOutput(sc.union(combinations), outputFile)
+    val variantCombinations = combination.flatMap { x =>
+      val same = x.i1.idx == x.i2.idx
+      var count = 0L
+      for {
+        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+        (v2, id2) <- x.i2.variants.zipWithIndex
+        if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
+          pairedFilter(v1, v2, pairFilters.value) &&
+          fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
+      } yield (v1, v2)
+    }
 
-    //val temp = combination.map(x => (x.i1.idx, x.i2.idx)).collect()
+    val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
+    writeOutput(variantCombinations, outputFile)
 
-    println(combination.count())
     sc.stop()
     logger.info("Done")
-  }
-
-  /** This will filter on fractions */
-  def pairFractionFilter(
-      rdd: RDD[(Variant, Variant)],
-      fractionsCutoffs: Broadcast[FractionsCutoffs],
-      samples: Broadcast[Array[String]],
-      pedigree: Broadcast[PedigreeFileArray]): RDD[(Variant, Variant)] = {
-    rdd.filter {
-      case (v1, v2) =>
-        fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
-    }
   }
 
   /** This filters if 1 of the 2 variants returns true */
@@ -165,61 +174,26 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
-  /** This filters if 1 of the 2 variants returns true */
-  def pairedFilter(rdd: RDD[(Variant, Variant)],
-                   pairFilters: Broadcast[List[AnnotationFilter]])
-    : RDD[(Variant, Variant)] = {
-    rdd.filter { case (v1, v2) => pairedFilter(v1, v2, pairFilters.value) }
-  }
-
-  def createCombinations(regionsRdd: RDD[(Int, List[Region])],
-           broadcastRegions: Broadcast[Array[List[Region]]],
-           maxDistance: Broadcast[Option[Long]]): RDD[Combination] = {
-    regionsRdd.flatMap { case (idx, regions) =>
-      for (i <- idx until broadcastRegions.value.length
-           if distanceFilter(regions, broadcastRegions.value(i), maxDistance.value)) yield {
-        Combination(idx, i)
-      }
+  /** This created a list of combinations rdds */
+  def createCombinations(
+      regionsRdd: RDD[(Int, List[Region])],
+      broadcastRegions: Broadcast[Array[List[Region]]],
+      maxDistance: Broadcast[Option[Long]]): RDD[Combination] = {
+    regionsRdd.flatMap {
+      case (idx, regions) =>
+        for (i <- idx until broadcastRegions.value.length
+             if distanceFilter(regions,
+                               broadcastRegions.value(i),
+                               maxDistance.value)) yield {
+          Combination(idx, i)
+        }
     }
   }
 
-//  def createCombinations(regions: Array[List[Region]],
-//                         maxDistance: Broadcast[Option[Long]]): Iterator[Combination] = {
-//    for (i <- regions.indices.iterator; j <- i until regions.length
-//         if distanceFilter(regions(i), regions(j), maxDistance.value)) yield {
-//      Combination(i, j)
-//    }
-//  }
-//
-//  /** This created a list of combinations rdds */
-//  def createCombinations(regionsRdds: Map[Int, RDD[List[Variant]]],
-//                         regions: Array[List[Region]],
-//                         maxDistance: Broadcast[Option[Long]])
-//    : IndexedSeq[RDD[(Variant, Variant)]] =
-//    for (i <- regions.indices; j <- i until regions.length
-//         if distanceFilter(regions(i), regions(j), maxDistance.value)) yield {
-//      val same = i == j
-//      val rdd = regionsRdds(i)
-//        .union(regionsRdds(j))
-//        .repartition(1)
-//      rdd.mapPartitions { records =>
-//        val list1 = records.next()
-//        val list2 = records.next()
-//        for {
-//          (v1, id1) <- list1.zipWithIndex.toIterator
-//          (v2, id2) <- list2.zipWithIndex
-//          if !same || id1 < id2
-//        } yield {
-//          val sorted = List(v1, v2).sortBy(v => (v.contig, v.pos))
-//          (sorted(0), sorted(1))
-//        }
-//      }
-//    }
-
   /** Write output to a single file */
-  def writeOutput(rdd: RDD[(Variant, Variant)], outputFile: File): Unit = {
+  def writeOutput(rdd: Dataset[(Variant, Variant)], outputFile: File): Unit = {
     val writer = new PrintWriter(outputFile)
-    rdd
+    rdd.rdd
       .map {
         case (v1, v2) =>
           (v1.contig, v1.pos, v2.contig, v2.pos)
@@ -258,13 +232,6 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
-  /** This filters when maxDistance is set */
-  def distanceFilter(
-      rdd: RDD[(Variant, Variant)],
-      maxDistance: Broadcast[Option[Long]]): RDD[(Variant, Variant)] = {
-    rdd.filter { case (v1, v2) => distanceFilter(v1, v2, maxDistance.value) }
-  }
-
   /** This filters by looking only at a single variants,
     * this reduces the number of combinations, this step is only there to improve performance */
   def singleAnnotationFilter(
@@ -288,14 +255,15 @@ object DigenicSearch extends ToolCommand[Args] {
     * @param annotations Info fields to read
     * @return
     */
-  def loadRegions(
-                 idx: Int,
-      regions: List[Region],
-      inputFiles: Broadcast[List[File]],
-      samples: Broadcast[Array[String]],
-      annotations: Broadcast[Set[String]]): IndexedVariants = {
+  def loadRegions(idx: Int,
+                  regions: List[Region],
+                  inputFiles: Broadcast[List[File]],
+                  samples: Broadcast[Array[String]],
+                  annotations: Broadcast[Set[String]]): IndexedVariantsList = {
     val readers = inputFiles.value.map(new VCFFileReader(_))
-    IndexedVariants(idx, regions.flatMap(new LoadRegion(readers, _, samples, annotations)))
+    IndexedVariantsList(
+      idx,
+      regions.flatMap(new LoadRegion(readers, _, samples, annotations)))
   }
 
   /** creates regions to analyse */

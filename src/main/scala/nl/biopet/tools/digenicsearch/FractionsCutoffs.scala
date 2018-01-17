@@ -28,18 +28,30 @@ case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
 
   def singleFractionFilter(variant: Variant,
                            pedigree: PedigreeFileArray): Boolean = {
-    val result = FractionsCutoffs.getFraction(variant, pedigree)
-    result.affected >= singleAffectedFraction && result.unaffected <= singleUnaffectedFraction
+    (variant.affectedFraction, variant.unaffectedFraction) match {
+      case (Some(a), Some(u)) =>
+        a >= singleAffectedFraction && u <= singleUnaffectedFraction
+      case _ =>
+        throw new IllegalStateException(
+          "Fractions should be known at this point")
+    }
   }
 
   def pairFractionFilter(v1: Variant,
                          v2: Variant,
                          pedigree: PedigreeFileArray): Boolean = {
-    val result1 = FractionsCutoffs.getFraction(v1, pedigree)
-    val result2 = FractionsCutoffs.getFraction(v2, pedigree)
 
-    (result1.affected >= pairAffectedFraction && result1.unaffected <= pairUnaffectedFraction) ||
-    (result2.affected >= pairAffectedFraction && result2.unaffected <= pairUnaffectedFraction)
+    (v1.affectedFraction,
+     v1.unaffectedFraction,
+     v2.affectedFraction,
+     v2.unaffectedFraction) match {
+      case (Some(a1), Some(u1), Some(a2), Some(u2)) =>
+        (a1 >= pairAffectedFraction && u1 <= pairUnaffectedFraction) ||
+          (a2 >= pairAffectedFraction && u2 <= pairUnaffectedFraction)
+      case _ =>
+        throw new IllegalStateException(
+          "Fractions should be known at this point")
+    }
   }
 }
 
@@ -47,7 +59,7 @@ object FractionsCutoffs {
 
   protected case class Result(unaffected: Double, affected: Double)
 
-  def getFraction(variant: Variant, pedigree: PedigreeFileArray): Result = {
+  def getFraction(variant: Variant, pedigree: PedigreeFileArray): Variant = {
     val affectedGenotypes = pedigree.affectedArray.map(variant.genotypes)
     val unaffectedGenotypes = pedigree.unaffectedArray.map(variant.genotypes)
 
@@ -61,7 +73,8 @@ object FractionsCutoffs {
       .count(!_.isReference)
       .toDouble / affectedGenotypes.length
 
-    Result(unaffectedFraction, affectedFraction)
+    variant.copy(unaffectedFraction = Some(unaffectedFraction),
+                 affectedFraction = Some(affectedFraction))
   }
 
 }
