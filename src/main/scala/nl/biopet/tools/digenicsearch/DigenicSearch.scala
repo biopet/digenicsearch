@@ -120,8 +120,7 @@ object DigenicSearch extends ToolCommand[Args] {
     println(
       "Total variants: " + regionsRdds
         .map(_.variants.length.toLong)
-        .collect()
-        .sum)
+        .reduce(_ + _))
 
     logger.info("Rdd loading done")
 
@@ -139,28 +138,20 @@ object DigenicSearch extends ToolCommand[Args] {
       .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
     val variantCombinations = combination.flatMap { x =>
-      val outputFile = new File(cmdArgs.outputDir, x.i1.idx + File.separator + x.i2.idx + ".tsv")
-      outputFile.getParentFile.mkdirs()
-      val writer = new PrintWriter(outputFile)
       val same = x.i1.idx == x.i2.idx
       var count = 0L
-      try {
-        for {
-          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-          (v2, id2) <- x.i2.variants.zipWithIndex
-          if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
-            pairedFilter(v1, v2, pairFilters.value) &&
-            fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
-        } yield {
-          writer.println(List(v1.contig, v1.pos, v2.contig, v2.pos).mkString("\t"))
-          ((x.i1.idx, x.i2.idx), (v1, v2))
-        }
-      } finally {
-        writer.close()
+      for {
+        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+        (v2, id2) <- x.i2.variants.zipWithIndex
+        if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
+          pairedFilter(v1, v2, pairFilters.value) &&
+          fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
+      } yield {
+        ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
       }
     }
 
-    variantCombinations.count()
+    println("Total combinations: " + variantCombinations.count())
     //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     //writeOutput(variantCombinations, cmdArgs.outputDir)
 

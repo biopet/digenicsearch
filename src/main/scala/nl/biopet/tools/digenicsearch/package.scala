@@ -53,4 +53,6 @@ package object digenicsearch {
     def isReference: Boolean = alleles.forall(_ == 0)
   }
 
+  case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int)
+
 }
