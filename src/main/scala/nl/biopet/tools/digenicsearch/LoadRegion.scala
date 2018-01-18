@@ -21,6 +21,7 @@
 
 package nl.biopet.tools.digenicsearch
 
+import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
 import nl.biopet.utils.ngs.intervals.BedRecord
@@ -41,12 +42,13 @@ import scala.collection.JavaConversions._
 class LoadRegion(inputReaders: List[VCFFileReader],
                  region: Region,
                  samples: Broadcast[Array[String]],
-                 annotationsFields: Broadcast[Set[String]])
+                 annotationsFields: Broadcast[Set[String]],
+                 dict: Broadcast[SAMSequenceDictionary])
     extends Iterator[Variant] {
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
       .map(
-        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+        vcf.loadRegion(_, BedRecord(dict.value.getSequence(region.contig).getSequenceName, region.start, region.end)))
       .map(_.buffered)
 
   def hasNext: Boolean = iterators.exists(_.hasNext)

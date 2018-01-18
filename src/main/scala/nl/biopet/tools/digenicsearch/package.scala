@@ -22,7 +22,7 @@
 package nl.biopet.tools
 
 package object digenicsearch {
-  case class Region(contig: String, start: Int, end: Int) {
+  case class Region(contig: Int, start: Int, end: Int) {
     def distance(other: Region): Option[Long] = {
       if (this.contig == other.contig) {
         if (this.start > other.end) Some(this.start - other.end)
@@ -35,7 +35,7 @@ package object digenicsearch {
   case class AnnotationFilter(key: String, method: Double => Boolean)
 
   case class AnnotationValue(key: String, value: List[Double])
-  case class Variant(contig: String,
+  case class Variant(contig: Int,
                      pos: Int,
                      alleles: List[String],
                      genotypes: List[Genotype],
@@ -53,7 +53,7 @@ package object digenicsearch {
     def isReference: Boolean = alleles.forall(_ == 0)
   }
 
-  case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int,
+  case class ResultLine(contig1: Int, pos1: Int, contig2: Int, pos2: Int,
                         affected1: Double, unaffected1: Double, affected2: Double, unaffected2: Double)
 
 }
