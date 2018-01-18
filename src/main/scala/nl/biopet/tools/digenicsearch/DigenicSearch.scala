@@ -153,7 +153,8 @@ object DigenicSearch extends ToolCommand[Args] {
           v1.affectedFraction.get, v1.unaffectedFraction.get,
           v2.affectedFraction.get, v2.unaffectedFraction.get)
       }
-    }.sort("contig1", "contig2", "pos1", "pos2").cache()
+    }//.sort("contig1", "contig2", "pos1", "pos2")
+     .cache()
 
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
