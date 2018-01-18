@@ -44,6 +44,9 @@ object DigenicSearch extends ToolCommand[Args] {
   def main(args: Array[String]): Unit = {
     val cmdArgs = cmdArrayToArgs(args)
 
+    val pairsFile = new File(cmdArgs.outputDir, "pairs")
+    require(!pairsFile.exists(), s"Output file already exists: $pairsFile")
+
     logger.info("Start")
     val sparkConf: SparkConf =
       new SparkConf(true).setMaster(cmdArgs.sparkMaster.getOrElse("local[1]"))
