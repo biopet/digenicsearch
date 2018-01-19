@@ -30,6 +30,7 @@ import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -111,7 +112,7 @@ object DigenicSearch extends ToolCommand[Args] {
       }
       .map { v =>
         v.copy(variants =
-          v.variants.map(FractionsCutoffs.getFraction(_, pedigree.value)))
+          v.variants.map(_.addSingleFraction(pedigree.value)))
       }
       .map { v =>
         v.copy(variants = v.variants.filter(

@@ -35,13 +35,6 @@ package object digenicsearch {
   case class AnnotationFilter(key: String, method: Double => Boolean)
 
   case class AnnotationValue(key: String, value: List[Double])
-  case class Variant(contig: String,
-                     pos: Int,
-                     alleles: List[String],
-                     genotypes: List[Genotype],
-                     annotations: List[AnnotationValue] = List(),
-                     affectedFraction: Option[Double] = None,
-                     unaffectedFraction: Option[Double] = None)
 
   case class Combination(i1: Int, i2: Int)
   case class CombinationSingle(i1: IndexedVariantsList, i2: Int)

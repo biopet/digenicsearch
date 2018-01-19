@@ -54,27 +54,3 @@ case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
     }
   }
 }
-
-object FractionsCutoffs {
-
-  protected case class Result(unaffected: Double, affected: Double)
-
-  def getFraction(variant: Variant, pedigree: PedigreeFileArray): Variant = {
-    val affectedGenotypes = pedigree.affectedArray.map(variant.genotypes)
-    val unaffectedGenotypes = pedigree.unaffectedArray.map(variant.genotypes)
-
-    val unaffectedFraction =
-      if (unaffectedGenotypes.nonEmpty)
-        unaffectedGenotypes
-          .count(!_.isReference)
-          .toDouble / unaffectedGenotypes.length
-      else 0.0
-    val affectedFraction = affectedGenotypes
-      .count(!_.isReference)
-      .toDouble / affectedGenotypes.length
-
-    variant.copy(unaffectedFraction = Some(unaffectedFraction),
-                 affectedFraction = Some(affectedFraction))
-  }
-
-}
