@@ -23,12 +23,10 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.{File, PrintWriter}
 
-import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.variant.vcf.VCFFileReader
 import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.ngs.ped.PedigreeFile
 import nl.biopet.utils.ngs.vcf
-import nl.biopet.utils.ngs.fasta
 import nl.biopet.utils.tool.ToolCommand
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -57,7 +55,6 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
-    val dict: Broadcast[SAMSequenceDictionary] = sc.broadcast(fasta.getCachedDict(cmdArgs.reference))
     val samples: Broadcast[Array[String]] =
       sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
     require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
@@ -94,7 +91,7 @@ object DigenicSearch extends ToolCommand[Args] {
     logger.info("Broadcasting done")
 
     val regions: Broadcast[Array[List[Region]]] =
-      sc.broadcast(generateRegions(cmdArgs, dict).toArray)
+      sc.broadcast(generateRegions(cmdArgs).toArray)
 
     val regionsRdd: RDD[(Int, List[Region])] =
       sc.parallelize(regions.value.zipWithIndex.map {
@@ -106,7 +103,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val regionsRdds = regionsRdd
       .map {
         case (idx, r) =>
-          loadRegions(idx, r, inputFiles, samples, annotations, dict)
+          loadRegions(idx, r, inputFiles, samples, annotations)
       }
       .map { v =>
         v.copy(variants =
@@ -280,16 +277,15 @@ object DigenicSearch extends ToolCommand[Args] {
                   regions: List[Region],
                   inputFiles: Broadcast[List[File]],
                   samples: Broadcast[Array[String]],
-                  annotations: Broadcast[Set[String]],
-                  dict: Broadcast[SAMSequenceDictionary]): IndexedVariantsList = {
+                  annotations: Broadcast[Set[String]]): IndexedVariantsList = {
     val readers = inputFiles.value.map(new VCFFileReader(_))
     IndexedVariantsList(
       idx,
-      regions.flatMap(new LoadRegion(readers, _, samples, annotations, dict)))
+      regions.flatMap(new LoadRegion(readers, _, samples, annotations)))
   }
 
   /** creates regions to analyse */
-  def generateRegions(cmdArgs: Args, dict: Broadcast[SAMSequenceDictionary]): List[List[Region]] = {
+  def generateRegions(cmdArgs: Args): List[List[Region]] = {
     val regions = (cmdArgs.regions match {
       case Some(i) =>
         BedRecordList.fromFile(i).validateContigs(cmdArgs.reference)
@@ -297,7 +293,7 @@ object DigenicSearch extends ToolCommand[Args] {
     }).combineOverlap
       .scatter(cmdArgs.binSize,
                maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
-    regions.map(x => x.map(y => Region(dict.value.getSequence(y.chr).getSequenceIndex, y.start, y.end)))
+    regions.map(x => x.map(y => Region(y.chr, y.start, y.end)))
   }
 
   def descriptionText: String =
