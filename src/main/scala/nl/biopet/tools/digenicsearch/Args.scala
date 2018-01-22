@@ -33,6 +33,6 @@ case class Args(inputFiles: List[File] = Nil,
                 pairAnnotationFilter: List[AnnotationFilter] = Nil,
                 fractions: FractionsCutoffs = FractionsCutoffs(),
                 maxDistance: Option[Long] = None,
-                binSize: Int = 10000000,
+                binSize: Int = 1000000,
                 maxContigsInSingleJob: Int = 250,
                 sparkMaster: Option[String] = None)

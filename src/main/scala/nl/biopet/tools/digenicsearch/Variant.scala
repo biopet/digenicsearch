@@ -37,3 +37,36 @@ case class Variant(contig: String,
   }
 }
 
+object Variant {
+  def filterPairFraction(v1: Variant,
+                         v2: Variant,
+                         pedigree: PedigreeFileArray,
+                         cutoffs: FractionsCutoffs): Option[(Variant, Variant)] = {
+    val alleles1 = v1.detectionResult.result.toMap
+    val alleles2 = v2.detectionResult.result.toMap
+
+    val alleles = (for ((a1, s1) <- alleles1; (a2, s2) <- alleles2) yield {
+      val combined = s1.zip(s2).map { case (c1, c2) => c1 && c2 }
+      val affectedGenotypes = pedigree.affectedArray.map(combined)
+      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
+
+      val unaffectedFraction =
+        if (unaffectedGenotypes.nonEmpty) {
+          unaffectedGenotypes.count(_ == true).toDouble / unaffectedGenotypes.length
+        } else 0.0
+      val affectedFraction = affectedGenotypes.count(_ == true).toDouble / affectedGenotypes.length
+
+      if (unaffectedFraction <= cutoffs.pairUnaffectedFraction && affectedFraction >= cutoffs.pairAffectedFraction) {
+        Option((a1, a2))
+      } else None
+    }).flatten
+
+    if (alleles.nonEmpty) {
+      val a1 =  alleles.map(_._1).toList.toSet
+      val a2 =  alleles.map(_._2).toList.toSet
+      val d1 = DetectionResult(v1.detectionResult.result.filter { case (a, _) => a1.contains(a) })
+      val d2 = DetectionResult(v2.detectionResult.result.filter { case (a, _) => a2.contains(a) })
+      Option((v1.copy(detectionResult = d1), v2.copy(detectionResult = d2)))
+    } else None
+  }
+}

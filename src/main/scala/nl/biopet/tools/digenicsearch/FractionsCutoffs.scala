@@ -24,22 +24,4 @@ package nl.biopet.tools.digenicsearch
 case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
                             pairAffectedFraction: Double = 1.0,
                             singleUnaffectedFraction: Double = 0,
-                            pairUnaffectedFraction: Double = 0) {
-
-  def pairFractionFilter(v1: Variant,
-                         v2: Variant,
-                         pedigree: PedigreeFileArray): Boolean = {
-    //FIXME: Wrong calculation
-
-//    (v1.fraction.map(_.affected), v1.fraction.map(_.unaffected),
-//      v2.fraction.map(_.affected), v2.fraction.map(_.unaffected)) match {
-//      case (Some(a1), Some(u1), Some(a2), Some(u2)) =>
-//        (a1 >= pairAffectedFraction && u1 <= pairUnaffectedFraction) ||
-//          (a2 >= pairAffectedFraction && u2 <= pairUnaffectedFraction)
-//      case _ =>
-//        throw new IllegalStateException(
-//          "Fractions should be known at this point")
-//    }
-    true
-  }
-}
+                            pairUnaffectedFraction: Double = 0)

@@ -140,15 +140,16 @@ object DigenicSearch extends ToolCommand[Args] {
     val variantCombinations = combination.flatMap { x =>
       val same = x.i1.idx == x.i2.idx
       var count = 0L
-      for {
+      (for {
         (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
         (v2, id2) <- x.i2.variants.zipWithIndex
         if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
           pairedFilter(v1, v2, pairFilters.value) &&
-          fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
+          Variant.filterPairFraction(v1, v2, pedigree.value, fractionsCutoffs.value).isDefined
       } yield {
-        ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
-      }
+        Variant.filterPairFraction(v1, v2, pedigree.value, fractionsCutoffs.value)
+          .map {case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos) }
+      }).flatten
     }.repartition(500)
       //.sort("contig1", "contig2", "pos1", "pos2")
      .cache()
