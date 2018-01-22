@@ -1,5 +1,7 @@
 package nl.biopet.tools.digenicsearch
 
+import scala.language.implicitConversions
+
 object DetectionMode extends Enumeration {
   case class DetectionResult(result: List[(List[Short], List[Boolean])])
 

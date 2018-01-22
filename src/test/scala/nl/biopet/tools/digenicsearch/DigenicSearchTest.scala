@@ -5,8 +5,7 @@ import java.io.File
 import com.google.common.io.Files
 import nl.biopet.utils.test.tools.ToolTest
 import org.testng.annotations.Test
-
-import scala.io.Source
+import nl.biopet.utils.conversions.yamlFileToMap
 
 class DigenicSearchTest extends ToolTest[Args] {
   def toolCommand: DigenicSearch.type = DigenicSearch
@@ -29,7 +28,8 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-p",
       resourcePath("/wgs2.ped")))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 10
   }
 
   @Test
@@ -44,7 +44,8 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-p",
       resourcePath("/wgs2.ped")))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 3
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 3
   }
 
   @Test
@@ -60,31 +61,36 @@ class DigenicSearchTest extends ToolTest[Args] {
       resourcePath("/wgs2.ped"),
       "--singleAnnotationFilter", "DP>=1"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 6
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 6
 
+    val outputDir2 = Files.createTempDir()
     DigenicSearch.main(Array("-R",
       resourcePath("/reference.fasta"),
       "-o",
-      outputDir.getAbsolutePath,
+      outputDir2.getAbsolutePath,
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
       resourcePath("/wgs2.ped"),
       "--singleAnnotationFilter", "DP<=1"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 1
+    val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
+    stats2("total_pairs") shouldBe 1
 
+    val outputDir3 = Files.createTempDir()
     DigenicSearch.main(Array("-R",
       resourcePath("/reference.fasta"),
       "-o",
-      outputDir.getAbsolutePath,
+      outputDir3.getAbsolutePath,
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
       resourcePath("/wgs2.ped"),
       "--singleAnnotationFilter", "DP>=2"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 3
+    val stats3 = yamlFileToMap(new File(outputDir3, "stats.yml"))
+    stats3("total_pairs") shouldBe 3
   }
 
   @Test
@@ -100,19 +106,22 @@ class DigenicSearchTest extends ToolTest[Args] {
       resourcePath("/wgs2.ped"),
       "--pairAnnotationFilter", "DP>=1"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 10
 
+    val outputDir2 = Files.createTempDir()
     DigenicSearch.main(Array("-R",
       resourcePath("/reference.fasta"),
       "-o",
-      outputDir.getAbsolutePath,
+      outputDir2.getAbsolutePath,
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
       resourcePath("/wgs2.ped"),
       "--pairAnnotationFilter", "DP>=2"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 9
+    val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
+    stats2("total_pairs") shouldBe 9
   }
 
   @Test
@@ -128,19 +137,22 @@ class DigenicSearchTest extends ToolTest[Args] {
       resourcePath("/wgs2.ped"),
       "--maxDistance", "999"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 4
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 4
 
+    val outputDir2 = Files.createTempDir()
     DigenicSearch.main(Array("-R",
       resourcePath("/reference.fasta"),
       "-o",
-      outputDir.getAbsolutePath,
+      outputDir2.getAbsolutePath,
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
       resourcePath("/wgs2.ped"),
       "--maxDistance", "1000"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 7
+    val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
+    stats2("total_pairs") shouldBe 7
   }
 
   @Test
@@ -172,7 +184,8 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-p",
       resourcePath("/wgs2.ped")))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 10
   }
 
   @Test
@@ -189,12 +202,14 @@ class DigenicSearchTest extends ToolTest[Args] {
       "-p",
       resourcePath("/wgs2.ped")))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 0
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 0
 
+    val outputDir2 = Files.createTempDir()
     DigenicSearch.main(Array("-R",
       resourcePath("/reference.fasta"),
       "-o",
-      outputDir.getAbsolutePath,
+      outputDir2.getAbsolutePath,
       "-i",
       resourcePath("/wgsBoth.vcf.gz"),
       "-p",
@@ -204,7 +219,8 @@ class DigenicSearchTest extends ToolTest[Args] {
       "--singleAffectedFraction", "0.5",
       "--pairAffectedFraction", "0.5"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 10
+    val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
+    stats2("total_pairs") shouldBe 10
   }
 
   @Test
@@ -221,6 +237,7 @@ class DigenicSearchTest extends ToolTest[Args] {
       "--binSize", "1000",
       "--maxDistance", "999"))
 
-    Source.fromFile(new File(outputDir, "pairs.tsv")).getLines().length shouldBe 4
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 4
   }
 }

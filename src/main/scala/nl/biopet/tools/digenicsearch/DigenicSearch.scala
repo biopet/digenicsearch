@@ -54,7 +54,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
     import sparkSession.implicits._
     implicit val sc: SparkContext = sparkSession.sparkContext
-    println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
+    logger.info(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
     val samples: Broadcast[Array[String]] =
       sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
@@ -118,9 +118,10 @@ object DigenicSearch extends ToolCommand[Args] {
       .toDS()
       .cache()
 
-    Future(regionsRdds
+    val singleFilterTotal = Future(regionsRdds
       .map(_.variants.length.toLong)
-      .reduce(_ + _)).onSuccess { case x => println("Total variants: " + x) }
+      .reduce(_ + _))
+    singleFilterTotal.onSuccess { case x => logger.info("Total variants: " + x) }
 
     logger.info("Rdd loading done")
 
@@ -157,7 +158,13 @@ object DigenicSearch extends ToolCommand[Args] {
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
 
-    println("Total combinations: " + variantCombinations.count())
+    val totalPairs = variantCombinations.count()
+    logger.info("Total combinations: " + totalPairs)
+
+    nl.biopet.utils.conversions.mapToYamlFile(Map(
+      "total_pairs" -> totalPairs,
+      "single_filter_total" -> Await.result(singleFilterTotal, Duration.Inf)
+    ), new File(cmdArgs.outputDir, "stats.yml"))
     //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     //writeOutput(variantCombinations, cmdArgs.outputDir)
 
@@ -196,28 +203,6 @@ object DigenicSearch extends ToolCommand[Args] {
           Combination(idx, i)
         }
     }
-  }
-
-  /** Write output to a single file */
-  def writeOutput(rdd: Dataset[((Int, Int),(Variant, Variant))], outputDir: File): Unit = {
-    val bla = rdd.rdd.groupByKey().map { case ((id1, id2), it) =>
-      val outputFile = new File(outputDir, id1 + File.separator + id2 + ".tsv")
-      outputFile.getParentFile.mkdirs()
-      val writer = new PrintWriter(outputFile)
-      it.foreach { case (v1, v2) => writer.println(List(v1.contig, v1.pos, v2.contig, v2.pos).mkString("\t")) }
-      writer.close()
-    }
-    bla.count()
-//    val writer = new PrintWriter(new File(outputDir, "pairs.tsv"))
-//      rdd.rdd.map {
-//        case ((id1, id2), (v1, v2)) =>
-//          (v1.contig, v1.pos, v2.contig, v2.pos)
-//      }
-//      .toLocalIterator
-//      .foreach {
-//        case (c1, p1, c2, p2) => writer.println(s"$c1\t$p1\t$c2\t$p2")
-//      }
-//    writer.close()
   }
 
   /** This filters region combinations when maxDistance is set */
