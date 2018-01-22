@@ -149,7 +149,6 @@ object DigenicSearch extends ToolCommand[Args] {
     val variantCombinations = combination
       .flatMap { x =>
         val same = x.i1.idx == x.i2.idx
-        var count = 0L
         (for {
           (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
           (v2, id2) <- x.i2.variants.zipWithIndex
