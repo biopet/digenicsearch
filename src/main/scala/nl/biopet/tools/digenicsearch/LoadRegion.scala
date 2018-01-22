@@ -86,15 +86,18 @@ class LoadRegion(inputReaders: List[VCFFileReader],
           throw new IllegalStateException(
             s"Sample '$sampleId' not found in $records")
       }
-      (Genotype(alleles.toList), GenotypeAnnotation(genotype.getDP, genotype.getDP))
+      (Genotype(alleles.toList),
+       GenotypeAnnotation(genotype.getDP, genotype.getDP))
     }
     val genotypes1 = genotypes.map(_._1).toList
-    Variant(region.contig,
-            position,
-            allAllelesString.toList,
-            genotypes1,
-            annotations.toList,
-            genotypes.map(_._2).toList,
-            DetectionMode.valueToVal(detectionMode).method(genotypes1))
+    Variant(
+      region.contig,
+      position,
+      allAllelesString.toList,
+      genotypes1,
+      annotations.toList,
+      genotypes.map(_._2).toList,
+      DetectionMode.valueToVal(detectionMode).method(genotypes1)
+    )
   }
 }

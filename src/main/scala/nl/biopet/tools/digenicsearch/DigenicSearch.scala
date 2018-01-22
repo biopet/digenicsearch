@@ -105,23 +105,31 @@ object DigenicSearch extends ToolCommand[Args] {
     val regionsRdds = regionsRdd
       .map {
         case (idx, r) =>
-          loadRegions(idx, r, inputFiles, samples, annotations, detectionMode.value)
+          loadRegions(idx,
+                      r,
+                      inputFiles,
+                      samples,
+                      annotations,
+                      detectionMode.value)
       }
       .map { v =>
         v.copy(variants =
           v.variants.filter(singleAnnotationFilter(_, singleFilters)))
       }
       .map { v =>
-        v.copy(variants =
-          v.variants.flatMap(_.filterSingleFraction(pedigree.value, fractionsCutoffs.value)))
+        v.copy(variants = v.variants.flatMap(
+          _.filterSingleFraction(pedigree.value, fractionsCutoffs.value)))
       }
       .toDS()
       .cache()
 
-    val singleFilterTotal = Future(regionsRdds
-      .map(_.variants.length.toLong)
-      .reduce(_ + _))
-    singleFilterTotal.onSuccess { case x => logger.info("Total variants: " + x) }
+    val singleFilterTotal = Future(
+      regionsRdds
+        .map(_.variants.length.toLong)
+        .reduce(_ + _))
+    singleFilterTotal.onSuccess {
+      case x => logger.info("Total variants: " + x)
+    }
 
     logger.info("Rdd loading done")
 
@@ -138,22 +146,32 @@ object DigenicSearch extends ToolCommand[Args] {
       .joinWith(regionsRdds, singleCombination("i2") === regionsRdds("idx"))
       .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
-    val variantCombinations = combination.flatMap { x =>
-      val same = x.i1.idx == x.i2.idx
-      var count = 0L
-      (for {
-        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-        (v2, id2) <- x.i2.variants.zipWithIndex
-        if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
-          pairedFilter(v1, v2, pairFilters.value) &&
-          Variant.filterPairFraction(v1, v2, pedigree.value, fractionsCutoffs.value).isDefined
-      } yield {
-        Variant.filterPairFraction(v1, v2, pedigree.value, fractionsCutoffs.value)
-          .map {case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos) }
-      }).flatten
-    }.repartition(500)
+    val variantCombinations = combination
+      .flatMap { x =>
+        val same = x.i1.idx == x.i2.idx
+        var count = 0L
+        (for {
+          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+          (v2, id2) <- x.i2.variants.zipWithIndex
+          if (!same || id1 < id2) && distanceFilter(v1, v2, maxDistance.value) &&
+            pairedFilter(v1, v2, pairFilters.value) &&
+            Variant
+              .filterPairFraction(v1,
+                                  v2,
+                                  pedigree.value,
+                                  fractionsCutoffs.value)
+              .isDefined
+        } yield {
+          Variant
+            .filterPairFraction(v1, v2, pedigree.value, fractionsCutoffs.value)
+            .map {
+              case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos)
+            }
+        }).flatten
+      }
+      .repartition(500)
       //.sort("contig1", "contig2", "pos1", "pos2")
-     .cache()
+      .cache()
 
     val outputFile = new File(cmdArgs.outputDir, "pairs")
     variantCombinations.write.parquet(outputFile.getAbsolutePath)
@@ -161,10 +179,12 @@ object DigenicSearch extends ToolCommand[Args] {
     val totalPairs = variantCombinations.count()
     logger.info("Total combinations: " + totalPairs)
 
-    nl.biopet.utils.conversions.mapToYamlFile(Map(
-      "total_pairs" -> totalPairs,
-      "single_filter_total" -> Await.result(singleFilterTotal, Duration.Inf)
-    ), new File(cmdArgs.outputDir, "stats.yml"))
+    nl.biopet.utils.conversions.mapToYamlFile(
+      Map(
+        "total_pairs" -> totalPairs,
+        "single_filter_total" -> Await.result(singleFilterTotal, Duration.Inf)
+      ),
+      new File(cmdArgs.outputDir, "stats.yml"))
     //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
     //writeOutput(variantCombinations, cmdArgs.outputDir)
 
@@ -264,7 +284,8 @@ object DigenicSearch extends ToolCommand[Args] {
     val readers = inputFiles.value.map(new VCFFileReader(_))
     IndexedVariantsList(
       idx,
-      regions.flatMap(new LoadRegion(readers, _, samples, annotations, detectionMode)))
+      regions.flatMap(
+        new LoadRegion(readers, _, samples, annotations, detectionMode)))
   }
 
   /** creates regions to analyse */
