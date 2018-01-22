@@ -48,6 +48,9 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .unbounded()
     .action((x, c) => c.copy(pedFiles = x :: c.pedFiles))
     .text("Input ped file for family relations and effected/non-effected")
+  opt[String]("detectionMode")
+    .action((x, c) => c.copy(detectionMode = DetectionMode.withName(x)))
+    .text(s"Detection mode, possible values: ${DetectionMode.values.mkString(", ")}")
   opt[String]("singleAnnotationFilter")
     .action {
       case (x, c) =>

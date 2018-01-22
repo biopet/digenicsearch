@@ -41,7 +41,8 @@ import scala.collection.JavaConversions._
 class LoadRegion(inputReaders: List[VCFFileReader],
                  region: Region,
                  samples: Broadcast[Array[String]],
-                 annotationsFields: Broadcast[Set[String]])
+                 annotationsFields: Broadcast[Set[String]],
+                 detectionMode: DetectionMode.Value)
     extends Iterator[Variant] {
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
@@ -85,12 +86,15 @@ class LoadRegion(inputReaders: List[VCFFileReader],
           throw new IllegalStateException(
             s"Sample '$sampleId' not found in $records")
       }
-      Genotype(alleles.toList, genotype.getDP, genotype.getDP)
+      (Genotype(alleles.toList), GenotypeAnnotation(genotype.getDP, genotype.getDP))
     }
+    val genotypes1 = genotypes.map(_._1).toList
     Variant(region.contig,
             position,
             allAllelesString.toList,
-            genotypes.toList,
-            annotations.toList)
+            genotypes1,
+            annotations.toList,
+            genotypes.map(_._2).toList,
+            DetectionMode.valueToVal(detectionMode).method(genotypes1))
   }
 }

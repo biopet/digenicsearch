@@ -42,11 +42,14 @@ package object digenicsearch {
                                     i2: IndexedVariantsList)
   case class IndexedVariantsList(idx: Int, variants: List[Variant])
 
-  case class Genotype(alleles: List[Short], dp: Int, gq: Int) {
+  case class Genotype(alleles: List[Short]) {
     def isReference: Boolean = alleles.forall(_ == 0)
   }
 
-  case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int,
-                        affected1: Double, unaffected1: Double, affected2: Double, unaffected2: Double)
+  case class GenotypeAnnotation(dp: Int, gq: Int)
+
+  case class PedigreeFraction(affected: Double, unaffected: Double)
+
+  case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int)
 
 }

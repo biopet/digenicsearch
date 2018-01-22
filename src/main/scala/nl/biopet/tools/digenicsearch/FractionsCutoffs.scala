@@ -26,31 +26,20 @@ case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
                             singleUnaffectedFraction: Double = 0,
                             pairUnaffectedFraction: Double = 0) {
 
-  def singleFractionFilter(variant: Variant,
-                           pedigree: PedigreeFileArray): Boolean = {
-    (variant.affectedFraction, variant.unaffectedFraction) match {
-      case (Some(a), Some(u)) =>
-        a >= singleAffectedFraction && u <= singleUnaffectedFraction
-      case _ =>
-        throw new IllegalStateException(
-          "Fractions should be known at this point")
-    }
-  }
-
   def pairFractionFilter(v1: Variant,
                          v2: Variant,
                          pedigree: PedigreeFileArray): Boolean = {
+    //FIXME: Wrong calculation
 
-    (v1.affectedFraction,
-     v1.unaffectedFraction,
-     v2.affectedFraction,
-     v2.unaffectedFraction) match {
-      case (Some(a1), Some(u1), Some(a2), Some(u2)) =>
-        (a1 >= pairAffectedFraction && u1 <= pairUnaffectedFraction) ||
-          (a2 >= pairAffectedFraction && u2 <= pairUnaffectedFraction)
-      case _ =>
-        throw new IllegalStateException(
-          "Fractions should be known at this point")
-    }
+//    (v1.fraction.map(_.affected), v1.fraction.map(_.unaffected),
+//      v2.fraction.map(_.affected), v2.fraction.map(_.unaffected)) match {
+//      case (Some(a1), Some(u1), Some(a2), Some(u2)) =>
+//        (a1 >= pairAffectedFraction && u1 <= pairUnaffectedFraction) ||
+//          (a2 >= pairAffectedFraction && u2 <= pairUnaffectedFraction)
+//      case _ =>
+//        throw new IllegalStateException(
+//          "Fractions should be known at this point")
+//    }
+    true
   }
 }

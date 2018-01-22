@@ -88,6 +88,7 @@ object DigenicSearch extends ToolCommand[Args] {
       sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
     val fractionsCutoffs = sc.broadcast(cmdArgs.fractions)
+    val detectionMode = sc.broadcast(cmdArgs.detectionMode)
 
     logger.info("Broadcasting done")
 
@@ -104,7 +105,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val regionsRdds = regionsRdd
       .map {
         case (idx, r) =>
-          loadRegions(idx, r, inputFiles, samples, annotations)
+          loadRegions(idx, r, inputFiles, samples, annotations, detectionMode.value)
       }
       .map { v =>
         v.copy(variants =
@@ -112,11 +113,7 @@ object DigenicSearch extends ToolCommand[Args] {
       }
       .map { v =>
         v.copy(variants =
-          v.variants.map(_.addSingleFraction(pedigree.value)))
-      }
-      .map { v =>
-        v.copy(variants = v.variants.filter(
-          fractionsCutoffs.value.singleFractionFilter(_, pedigree.value)))
+          v.variants.flatMap(_.filterSingleFraction(pedigree.value, fractionsCutoffs.value)))
       }
       .toDS()
       .cache()
@@ -150,9 +147,7 @@ object DigenicSearch extends ToolCommand[Args] {
           pairedFilter(v1, v2, pairFilters.value) &&
           fractionsCutoffs.value.pairFractionFilter(v1, v2, pedigree.value)
       } yield {
-        ResultLine(v1.contig, v1.pos, v2.contig, v2.pos,
-          v1.affectedFraction.get, v1.unaffectedFraction.get,
-          v2.affectedFraction.get, v2.unaffectedFraction.get)
+        ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
       }
     }.repartition(500)
       //.sort("contig1", "contig2", "pos1", "pos2")
@@ -278,11 +273,12 @@ object DigenicSearch extends ToolCommand[Args] {
                   regions: List[Region],
                   inputFiles: Broadcast[List[File]],
                   samples: Broadcast[Array[String]],
-                  annotations: Broadcast[Set[String]]): IndexedVariantsList = {
+                  annotations: Broadcast[Set[String]],
+                  detectionMode: DetectionMode.Value): IndexedVariantsList = {
     val readers = inputFiles.value.map(new VCFFileReader(_))
     IndexedVariantsList(
       idx,
-      regions.flatMap(new LoadRegion(readers, _, samples, annotations)))
+      regions.flatMap(new LoadRegion(readers, _, samples, annotations, detectionMode)))
   }
 
   /** creates regions to analyse */
