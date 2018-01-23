@@ -36,13 +36,16 @@ object DetectionMode extends Enumeration {
   }
 
   val Allele = Val { alleles =>
-    ???
-  //TODO
+    DetectionResult(
+      alleles.flatMap(_.alleles).filter(_ != 0).distinct.map { key =>
+        List(key) -> alleles.map(_.alleles.contains(key))
+      })
   }
 
   val Genotype = Val { alleles =>
-    ???
-  //TODO
+    DetectionResult(
+      alleles.filter(!_.isReference).map(_.alleles).distinct.map { g =>
+        g -> alleles.map(_.alleles == g)
+      })
   }
-
 }
