@@ -8,6 +8,9 @@ import org.testng.annotations.Test
 import nl.biopet.utils.conversions.yamlFileToMap
 
 class DigenicSearchTest extends ToolTest[Args] {
+
+  System.setProperty("spark.sql.shuffle.partitions", "1")
+
   def toolCommand: DigenicSearch.type = DigenicSearch
   @Test
   def testNoArgs(): Unit = {
