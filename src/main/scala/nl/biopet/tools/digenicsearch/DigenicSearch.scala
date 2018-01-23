@@ -260,9 +260,10 @@ object DigenicSearch extends ToolCommand[Args] {
                   regions: List[Region],
                   broadcasts: Broadcasts): IndexedVariantsList = {
     val readers = broadcasts.inputFiles.map(new VCFFileReader(_))
+    val externalReaders = broadcasts.externalFiles.map(new VCFFileReader(_))
     IndexedVariantsList(
       idx,
-      regions.flatMap(new LoadRegion(readers, _, broadcasts)))
+      regions.flatMap(new LoadRegion(readers, externalReaders, _, broadcasts)))
   }
 
   /** creates regions to analyse */

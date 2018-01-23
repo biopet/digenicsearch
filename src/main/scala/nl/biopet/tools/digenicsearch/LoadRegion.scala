@@ -32,16 +32,24 @@ import scala.collection.JavaConversions._
   * This method will return a iterator of [[Variant]]
   *
   * @param inputReaders Vcf input readers
+  * @param externalInputReaders Vcf input readers
   * @param region Single regions to load
   * @param broadcasts Broadcast values
   * @return
   */
 class LoadRegion(inputReaders: List[VCFFileReader],
+                 externalInputReaders: Array[VCFFileReader],
                  region: Region,
                  broadcasts: Broadcasts)
     extends Iterator[Variant] {
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
+      .map(
+        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+      .map(_.buffered)
+
+  protected val externalIterators: Array[BufferedIterator[VariantContext]] =
+    externalInputReaders
       .map(
         vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
       .map(_.buffered)
@@ -86,6 +94,26 @@ class LoadRegion(inputReaders: List[VCFFileReader],
        GenotypeAnnotation(genotype.getDP, genotype.getDP))
     }
     val genotypes1 = genotypes.map { case (g, _) => g }.toList
+
+    val externalGenotypes: Array[List[Genotype]] = externalIterators.map {
+      it =>
+        if (it.hasNext) {
+          while (it.hasNext && it.head.getStart < position) it.next()
+          if (it.head.getStart == position) {
+            val record = it.next()
+            if (record.getReference == refAlleles.head)
+              (for (g <- record.getGenotypes) yield {
+                Genotype(
+                  g.getAlleles
+                    .map(a =>
+                      allAllelesString.indexOf(a.getBaseString).toShort)
+                    .toList)
+              }).toList
+            else Nil
+          } else Nil
+        } else Nil
+    }
+
     Variant(
       region.contig,
       position,
@@ -93,7 +121,8 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       genotypes1,
       annotations.toList,
       genotypes.map { case (_, g) => g }.toList,
-      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1)
+      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1),
+      externalGenotypes
     )
   }
 }

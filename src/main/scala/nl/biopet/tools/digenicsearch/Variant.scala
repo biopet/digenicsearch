@@ -29,7 +29,8 @@ case class Variant(contig: String,
                    genotypes: List[Genotype],
                    annotations: List[AnnotationValue] = List(),
                    genotypeAnnotation: List[GenotypeAnnotation],
-                   detectionResult: DetectionMode.DetectionResult) {
+                   detectionResult: DetectionMode.DetectionResult,
+                   externalGenotypes: Array[List[Genotype]]) {
 
   def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
 
