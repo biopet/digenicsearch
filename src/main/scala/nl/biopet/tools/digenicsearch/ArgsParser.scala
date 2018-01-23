@@ -60,6 +60,7 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .text(
       s"Detection mode, possible values: ${DetectionMode.values.mkString(", ")}")
   opt[String]("singleAnnotationFilter")
+    .unbounded()
     .action {
       case (x, c) =>
         c.copy(
@@ -68,6 +69,7 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     }
     .text("Filter on single variant")
   opt[String]("pairAnnotationFilter")
+    .unbounded()
     .action {
       case (x, c) =>
         c.copy(
@@ -93,9 +95,33 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[Int]("binSize") action { (x, c) =>
     c.copy(binSize = x)
   } text "Binsize in estimated base pairs"
-  opt[Int]("maxContigsInSingleJob") action { (x, c) =>
+  opt[Int]("maxContigsInSingleJob").unbounded().action { (x, c) =>
     c.copy(maxContigsInSingleJob = x)
   } text s"Max number of bins to be combined, default is 250"
+  opt[(String, File)]("externalFile") action {
+    case ((key, value), c) =>
+      if (c.externalFiles.contains(key))
+        throw new IllegalArgumentException(s"Key '$key' already exist")
+      c.copy(externalFiles = c.externalFiles ++ Map(key -> value))
+  } text s"External file used for filtering"
+  opt[String]("singleExternalFilters")
+    .unbounded()
+    .action {
+      case (x, c) =>
+        c.copy(
+          singleExternalFilters = c.singleExternalFilters :+ ArgsParser
+            .parseAnnotationFilter(x))
+    }
+    .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
+  opt[String]("pairExternalFilters")
+    .unbounded()
+    .action {
+      case (x, c) =>
+        c.copy(
+          pairExternalFilters = c.pairExternalFilters :+ ArgsParser
+            .parseAnnotationFilter(x))
+    }
+    .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
   opt[String]("sparkMaster")
     .action((x, c) => c.copy(sparkMaster = Some(x)))
     .text("Spark master, default to local[1]")

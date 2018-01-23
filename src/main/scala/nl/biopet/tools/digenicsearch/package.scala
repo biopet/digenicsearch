@@ -33,6 +33,7 @@ package object digenicsearch {
   }
 
   case class AnnotationFilter(key: String, method: Double => Boolean)
+  case class ExternalFilter(key: String, id: Int, method: Double => Boolean)
 
   case class AnnotationValue(key: String, value: List[Double])
 
