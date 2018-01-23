@@ -42,9 +42,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
   def main(args: Array[String]): Unit = {
     val cmdArgs = cmdArrayToArgs(args)
-
-    val pairsFile = new File(cmdArgs.outputDir, "pairs")
-    require(!pairsFile.exists(), s"Output file already exists: $pairsFile")
+    checkExistsOutput(cmdArgs.outputDir)
 
     logger.info("Start")
     val sparkConf: SparkConf =
@@ -63,19 +61,10 @@ object DigenicSearch extends ToolCommand[Args] {
         case (list, idx) => idx -> list
       }, broadcasts.value.regions.length)
 
-    logger.info("Regions generated")
-
     val variants: Dataset[IndexedVariantsList] =
       variantsRdd(regionsRdd, broadcasts).toDS().cache()
 
-    val singleFilterTotal = Future(
-      variants
-        .map(_.variants.length.toLong)
-        .reduce(_ + _))
-    singleFilterTotal.onSuccess {
-      case x => logger.info("Total variants: " + x)
-    }
-    logger.info("Rdd loading done")
+    val singleFilterTotal = countSingleFilterTotal(variants)
 
     val indexCombination: Dataset[Combination] =
       createCombinations(regionsRdd, broadcasts).toDS()
@@ -85,23 +74,46 @@ object DigenicSearch extends ToolCommand[Args] {
       //.repartition(500)
       //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
-    logger.info("Combination regions done")
 
-    val outputFile = new File(cmdArgs.outputDir, "pairs")
-    variantCombinations.write.parquet(outputFile.getAbsolutePath)
+    variantCombinations.write.parquet(
+      outputFile(cmdArgs.outputDir).getAbsolutePath)
 
-    val totalPairs = variantCombinations.count()
-    logger.info("Total combinations: " + totalPairs)
-
-    mapToYamlFile(
-      Map(
-        "total_pairs" -> totalPairs,
-        "single_filter_total" -> Await.result(singleFilterTotal, Duration.Inf)
-      ),
-      new File(cmdArgs.outputDir, "stats.yml"))
+    writeStatsFile(cmdArgs.outputDir,
+                   Await.result(singleFilterTotal, Duration.Inf),
+                   variantCombinations.count())
 
     sc.stop()
     logger.info("Done")
+  }
+
+  def outputFile(outputDir: File): File = new File(outputDir, "pairs")
+
+  def checkExistsOutput(outputDir: File): Unit = {
+    require(!outputFile(outputDir).exists(),
+            s"Output file already exists: ${outputFile(outputDir)}")
+  }
+
+  def writeStatsFile(outputDir: File,
+                     singleFilterTotal: Long,
+                     totalPairs: Long): Unit = {
+    mapToYamlFile(Map(
+                    "total_pairs" -> totalPairs,
+                    "single_filter_total" -> singleFilterTotal
+                  ),
+                  new File(outputDir, "stats.yml"))
+  }
+
+  def countSingleFilterTotal(variants: Dataset[IndexedVariantsList])(
+      implicit sparkSession: SparkSession): Future[Long] = {
+    import sparkSession.implicits._
+    val f = Future(
+      variants
+        .map(_.variants.length.toLong)
+        .reduce(_ + _))
+    f.onSuccess {
+      case x => logger.info("Total variants: " + x)
+    }
+    f
   }
 
   def createVariantCombinations(variants: Dataset[IndexedVariantsList],
