@@ -31,14 +31,13 @@ case class Variant(contig: String,
                    genotypeAnnotation: List[GenotypeAnnotation],
                    detectionResult: DetectionMode.DetectionResult) {
 
-  def filterSingleFraction(pedigree: PedigreeFileArray,
-                           cutoffs: FractionsCutoffs): Option[Variant] = {
+  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
 
     val alleles = detectionResult.result.toMap
 
     val result = for ((allele, result) <- alleles) yield {
-      val affectedGenotypes = pedigree.affectedArray.map(result)
-      val unaffectedGenotypes = pedigree.unaffectedArray.map(result)
+      val affectedGenotypes = broadcasts.pedigree.affectedArray.map(result)
+      val unaffectedGenotypes = broadcasts.pedigree.unaffectedArray.map(result)
 
       allele -> PedigreeFraction(
         Variant.affectedFraction(affectedGenotypes),
@@ -47,9 +46,13 @@ case class Variant(contig: String,
 
     val filter = result
       .filter {
-        case (_, f) => f.unaffected <= cutoffs.singleUnaffectedFraction
+        case (_, f) =>
+          f.unaffected <= broadcasts.fractionsCutoffs.singleUnaffectedFraction
       }
-      .filter { case (_, f) => f.affected >= cutoffs.singleAffectedFraction }
+      .filter {
+        case (_, f) =>
+          f.affected >= broadcasts.fractionsCutoffs.singleAffectedFraction
+      }
 
     if (filter.nonEmpty) {
       Some(

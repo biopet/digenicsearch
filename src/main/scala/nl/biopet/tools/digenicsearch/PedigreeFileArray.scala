@@ -21,6 +21,8 @@
 
 package nl.biopet.tools.digenicsearch
 
+import java.io.File
+
 import nl.biopet.utils.ngs.ped.{PedigreeFile, PedigreeSample, Phenotype}
 
 case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
@@ -31,4 +33,14 @@ case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
   val unaffectedArray: Array[Int] = pedArray.zipWithIndex
     .filter { case (p, _) => p.phenotype == Phenotype.Unaffected }
     .map { case (_, idx) => idx }
+}
+
+object PedigreeFileArray {
+  def fromFiles(files: List[File], samples: Array[String]): PedigreeFileArray = {
+    val pedSamples = files.map(PedigreeFile.fromFile).reduce(_ + _)
+    PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter {
+      case (s, _) =>
+        samples.contains(s)
+    }), samples)
+  }
 }

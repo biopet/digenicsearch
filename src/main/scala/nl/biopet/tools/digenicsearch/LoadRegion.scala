@@ -25,7 +25,6 @@ import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
 import nl.biopet.utils.ngs.intervals.BedRecord
 import nl.biopet.utils.ngs.vcf
-import org.apache.spark.broadcast.Broadcast
 
 import scala.collection.JavaConversions._
 
@@ -34,15 +33,12 @@ import scala.collection.JavaConversions._
   *
   * @param inputReaders Vcf input readers
   * @param region Single regions to load
-  * @param samples Samples ID's that should be found
-  * @param annotationsFields Info fields that need to be kept, the rest is not loaden into memory
+  * @param broadcasts Broadcast values
   * @return
   */
 class LoadRegion(inputReaders: List[VCFFileReader],
                  region: Region,
-                 samples: Broadcast[Array[String]],
-                 annotationsFields: Broadcast[Set[String]],
-                 detectionMode: DetectionMode.Value)
+                 broadcasts: Broadcasts)
     extends Iterator[Variant] {
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
@@ -61,7 +57,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
     val allAlleles = records.flatMap(_.getAlleles)
     val refAlleles = allAlleles.filter(_.isReference)
     val altAlleles = allAlleles.filter(!_.isReference)
-    val annotations = annotationsFields.value.map { field =>
+    val annotations = broadcasts.annotations.map { field =>
       AnnotationValue(field, records.flatMap { record =>
         if (record.hasAttribute(field))
           Some(record.getAttributeAsDouble(field, 0.0))
@@ -72,7 +68,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       throw new UnsupportedOperationException(
         "Multiple reference alleles found")
     } else (refAlleles ::: altAlleles).map(_.toString).toArray
-    val genotypes = samples.value.map { sampleId =>
+    val genotypes = broadcasts.samples.map { sampleId =>
       val genotypes = records.flatMap(x => Option(x.getGenotype(sampleId)))
       val (genotype, alleles) = genotypes.headOption match {
         case _ if genotypes.length > 1 =>
@@ -97,7 +93,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       genotypes1,
       annotations.toList,
       genotypes.map { case (_, g) => g }.toList,
-      DetectionMode.valueToVal(detectionMode).method(genotypes1)
+      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1)
     )
   }
 }
