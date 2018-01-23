@@ -168,7 +168,7 @@ object DigenicSearch extends ToolCommand[Args] {
             }
         }).flatten
       }
-      .repartition(500)
+      //.repartition(500)
       //.sort("contig1", "contig2", "pos1", "pos2")
       .cache()
 

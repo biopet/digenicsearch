@@ -21,7 +21,7 @@ class DigenicSearchTest extends ToolTest[Args] {
   def wgs2Arg = Array("-i", resourcePath("/wgs2.vcf.gz"))
   def wgs2PedArg = Array("-p", resourcePath("/wgs2.ped"))
   def outputDirArg(file: File) = Array("-o", file.getAbsolutePath)
-  def defaultWgs2Arg(outputDir: File): Array[String] = defaultWgs2Arg(outputDir)
+  def defaultWgs2Arg(outputDir: File): Array[String] = outputDirArg(outputDir) ++ referenceArgs ++ wgs2Arg ++ wgs2PedArg
 
   @Test
   def testDefault(): Unit = {
@@ -123,19 +123,6 @@ class DigenicSearchTest extends ToolTest[Args] {
     val outputDir2 = Files.createTempDir()
     DigenicSearch.main(outputDirArg(outputDir2) ++ referenceArgs ++ wgs2PedArg ++ Array(
       "-i", resourcePath("/wgsBoth.vcf.gz"), "-p", resourcePath("/wgs1-affected.ped"),
-      "--singleAffectedFraction", "0.5",
-      "--pairAffectedFraction", "0.5"))
-
-    DigenicSearch.main(Array("-R",
-      resourcePath("/reference.fasta"),
-      "-o",
-      outputDir2.getAbsolutePath,
-      "-i",
-      resourcePath("/wgsBoth.vcf.gz"),
-      "-p",
-      resourcePath("/wgs1-affected.ped"),
-      "-p",
-      resourcePath("/wgs2.ped"),
       "--singleAffectedFraction", "0.5",
       "--pairAffectedFraction", "0.5"))
 
