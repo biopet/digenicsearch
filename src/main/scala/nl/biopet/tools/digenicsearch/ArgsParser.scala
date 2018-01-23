@@ -49,7 +49,14 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .action((x, c) => c.copy(pedFiles = x :: c.pedFiles))
     .text("Input ped file for family relations and effected/non-effected")
   opt[String]("detectionMode")
-    .action((x, c) => c.copy(detectionMode = DetectionMode.withName(x)))
+    .action(
+      (x, c) =>
+        c.copy(
+          detectionMode = DetectionMode.values
+            .find(_.toString.toLowerCase == x.toLowerCase)
+            .getOrElse(throw new IllegalArgumentException(
+              s"Value '$x' not allowed, possible values: ${DetectionMode.values
+                .mkString(", ")}"))))
     .text(
       s"Detection mode, possible values: ${DetectionMode.values.mkString(", ")}")
   opt[String]("singleAnnotationFilter")

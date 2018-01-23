@@ -39,15 +39,20 @@ class ArgparserTest extends BiopetTest {
 
   @Test
   def testDetectionMode(): Unit = {
-    val args = Array("-R",
+    def args(mode: String) = Array("-R",
       resourcePath("/reference.fasta"),
       "-o",
       "./",
       "-i",
       resourcePath("/wgs2.vcf.gz"),
       "-p",
-      resourcePath("/wgs2.ped"), "--detectionMode", "Allele")
+      resourcePath("/wgs2.ped"), "--detectionMode", mode)
 
-    DigenicSearch.cmdArrayToArgs(args).detectionMode shouldBe DetectionMode.Allele
+    DigenicSearch.cmdArrayToArgs(args("Allele")).detectionMode shouldBe DetectionMode.Allele
+    DigenicSearch.cmdArrayToArgs(args("allele")).detectionMode shouldBe DetectionMode.Allele
+
+    intercept[IllegalArgumentException] {
+      DigenicSearch.cmdArrayToArgs(args("sadfhaslf"))
+    }
   }
 }
