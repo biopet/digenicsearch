@@ -21,17 +21,17 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.{File, PrintWriter}
+import java.io.File
 
 import htsjdk.variant.vcf.VCFFileReader
 import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.ngs.ped.PedigreeFile
 import nl.biopet.utils.ngs.vcf
 import nl.biopet.utils.tool.ToolCommand
+import nl.biopet.utils.conversions.mapToYamlFile
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
-import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.duration.Duration
@@ -178,14 +178,12 @@ object DigenicSearch extends ToolCommand[Args] {
     val totalPairs = variantCombinations.count()
     logger.info("Total combinations: " + totalPairs)
 
-    nl.biopet.utils.conversions.mapToYamlFile(
+    mapToYamlFile(
       Map(
         "total_pairs" -> totalPairs,
         "single_filter_total" -> Await.result(singleFilterTotal, Duration.Inf)
       ),
       new File(cmdArgs.outputDir, "stats.yml"))
-    //val outputFile = new File(cmdArgs.outputDir, "pairs.tsv")
-    //writeOutput(variantCombinations, cmdArgs.outputDir)
 
     sc.stop()
     logger.info("Done")
