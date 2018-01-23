@@ -40,17 +40,9 @@ case class Variant(contig: String,
       val affectedGenotypes = pedigree.affectedArray.map(result)
       val unaffectedGenotypes = pedigree.unaffectedArray.map(result)
 
-      val unaffectedFraction =
-        if (unaffectedGenotypes.nonEmpty) {
-          unaffectedGenotypes
-            .count(_ == true)
-            .toDouble / unaffectedGenotypes.length
-        } else 0.0
-      val affectedFraction = affectedGenotypes
-        .count(_ == true)
-        .toDouble / affectedGenotypes.length
-
-      allele -> PedigreeFraction(affectedFraction, unaffectedFraction)
+      allele -> PedigreeFraction(
+        Variant.affectedFraction(affectedGenotypes),
+        Variant.unaffectedFraction(unaffectedGenotypes))
     }
 
     val filter = result
@@ -68,6 +60,21 @@ case class Variant(contig: String,
 }
 
 object Variant {
+
+  private def unaffectedFraction(unaffectedGenotypes: Array[Boolean]) = {
+    if (unaffectedGenotypes.nonEmpty) {
+      unaffectedGenotypes
+        .count(_ == true)
+        .toDouble / unaffectedGenotypes.length
+    } else 0.0
+  }
+
+  private def affectedFraction(affectedGenotypes: Array[Boolean]) = {
+    affectedGenotypes
+      .count(_ == true)
+      .toDouble / affectedGenotypes.length
+  }
+
   def filterPairFraction(
       v1: Variant,
       v2: Variant,
@@ -81,17 +88,8 @@ object Variant {
       val affectedGenotypes = pedigree.affectedArray.map(combined)
       val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
 
-      val unaffectedFraction =
-        if (unaffectedGenotypes.nonEmpty) {
-          unaffectedGenotypes
-            .count(_ == true)
-            .toDouble / unaffectedGenotypes.length
-        } else 0.0
-      val affectedFraction = affectedGenotypes
-        .count(_ == true)
-        .toDouble / affectedGenotypes.length
-
-      if (unaffectedFraction <= cutoffs.pairUnaffectedFraction && affectedFraction >= cutoffs.pairAffectedFraction) {
+      if (unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
+          affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction) {
         Option((a1, a2))
       } else None
     }).flatten
