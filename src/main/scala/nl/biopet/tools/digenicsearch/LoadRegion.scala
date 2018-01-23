@@ -89,14 +89,14 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       (Genotype(alleles.toList),
        GenotypeAnnotation(genotype.getDP, genotype.getDP))
     }
-    val genotypes1 = genotypes.map(_._1).toList
+    val genotypes1 = genotypes.map { case (g, _) => g }.toList
     Variant(
       region.contig,
       position,
       allAllelesString.toList,
       genotypes1,
       annotations.toList,
-      genotypes.map(_._2).toList,
+      genotypes.map { case (_, g) => g }.toList,
       DetectionMode.valueToVal(detectionMode).method(genotypes1)
     )
   }

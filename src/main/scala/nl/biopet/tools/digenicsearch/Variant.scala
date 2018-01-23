@@ -54,8 +54,10 @@ case class Variant(contig: String,
     }
 
     val filter = result
-      .filter(_._2.unaffected <= cutoffs.singleUnaffectedFraction)
-      .filter(_._2.affected >= cutoffs.singleAffectedFraction)
+      .filter {
+        case (_, f) => f.unaffected <= cutoffs.singleUnaffectedFraction
+      }
+      .filter { case (_, f) => f.affected >= cutoffs.singleAffectedFraction }
 
     if (filter.nonEmpty) {
       Some(
@@ -95,8 +97,8 @@ object Variant {
     }).flatten
 
     if (alleles.nonEmpty) {
-      val a1 = alleles.map(_._1).toList.toSet
-      val a2 = alleles.map(_._2).toList.toSet
+      val a1 = alleles.map { case (a, _) => a }.toList.toSet
+      val a2 = alleles.map { case (_, a) => a }.toList.toSet
       val d1 = DetectionResult(v1.detectionResult.result.filter {
         case (a, _) => a1.contains(a)
       })
