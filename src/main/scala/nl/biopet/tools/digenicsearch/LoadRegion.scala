@@ -100,7 +100,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       it =>
         if (it.hasNext) {
           while (it.hasNext && it.head.getStart < position) it.next()
-          if (it.head.getStart == position) {
+          if (it.hasNext && it.head.getStart == position) {
             val record = it.next()
             if (record.getReference == refAlleles.head)
               (for (g <- record.getGenotypes.filter(_.isCalled)) yield {
