@@ -106,8 +106,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
               (for (g <- record.getGenotypes.filter(_.isCalled)) yield {
                 Genotype(
                   g.getAlleles
-                    .map(a =>
-                      allAllelesString.indexOf(a.getBaseString).toShort)
+                    .map(a => allAllelesString.indexOf(a.toString).toShort)
                     .toList)
               }).toList
             else Nil

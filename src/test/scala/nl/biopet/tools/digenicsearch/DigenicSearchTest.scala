@@ -143,4 +143,23 @@ class DigenicSearchTest extends ToolTest[Args] {
     val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
     stats("total_pairs") shouldBe 4
   }
+
+  @Test
+  def testExternalFilter(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(defaultWgs2Arg(outputDir) ++ Array(
+      "--externalFile", "KEY=" + resourcePath("/wgsBoth.vcf.gz"),
+      "--singleExternalFilter", "KEY<=0.6"))
+
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 10
+
+    val outputDir2 = Files.createTempDir()
+    DigenicSearch.main(defaultWgs2Arg(outputDir2) ++ Array(
+      "--externalFile", "KEY=" + resourcePath("/wgsBoth.vcf.gz"),
+      "--singleExternalFilter", "KEY<=0.4"))
+
+    val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
+    stats2("total_pairs") shouldBe 0
+  }
 }

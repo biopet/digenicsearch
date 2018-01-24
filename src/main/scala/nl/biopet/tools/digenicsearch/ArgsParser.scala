@@ -104,7 +104,7 @@ class ArgsParser(toolCommand: ToolCommand[Args])
         throw new IllegalArgumentException(s"Key '$key' already exist")
       c.copy(externalFiles = c.externalFiles ++ Map(key -> value))
   } text s"External file used for filtering"
-  opt[String]("singleExternalFilters")
+  opt[String]("singleExternalFilter")
     .unbounded()
     .action {
       case (x, c) =>
@@ -113,7 +113,7 @@ class ArgsParser(toolCommand: ToolCommand[Args])
             .parseAnnotationFilter(x))
     }
     .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
-  opt[String]("pairExternalFilters")
+  opt[String]("pairExternalFilter")
     .unbounded()
     .action {
       case (x, c) =>
