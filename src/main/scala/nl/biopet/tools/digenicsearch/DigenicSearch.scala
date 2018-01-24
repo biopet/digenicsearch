@@ -167,14 +167,18 @@ object DigenicSearch extends ToolCommand[Args] {
           loadRegions(idx, r, broadcasts.value)
       }
       .map { v =>
-        v.copy(
-          variants =
-            v.variants.filter(singleAnnotationFilter(_, broadcasts.value)))
+        v.copy(variants =
+          v.variants.filter(singleAnnotationFilter(_, broadcasts.value)))
       }
       .map { v =>
         v.copy(
           variants =
             v.variants.flatMap(_.filterSingleFraction(broadcasts.value)))
+      }
+      .map { v =>
+        v.copy(
+          variants =
+            v.variants.flatMap(_.filterExternalFractions(broadcasts.value)))
       }
   }
 

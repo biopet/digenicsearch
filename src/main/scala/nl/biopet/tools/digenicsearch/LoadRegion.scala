@@ -23,6 +23,7 @@ package nl.biopet.tools.digenicsearch
 
 import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
+import nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult
 import nl.biopet.utils.ngs.intervals.BedRecord
 import nl.biopet.utils.ngs.vcf
 
@@ -102,7 +103,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
           if (it.head.getStart == position) {
             val record = it.next()
             if (record.getReference == refAlleles.head)
-              (for (g <- record.getGenotypes) yield {
+              (for (g <- record.getGenotypes.filter(_.isCalled)) yield {
                 Genotype(
                   g.getAlleles
                     .map(a =>
@@ -114,6 +115,17 @@ class LoadRegion(inputReaders: List[VCFFileReader],
         } else Nil
     }
 
+    val detectionResult =
+      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1)
+
+    val externalDetetcionResults = externalGenotypes.map { g =>
+      val result = DetectionMode.valueToVal(broadcasts.detectionMode).method(g)
+      DetectionResult(result.result.filter {
+        case (allele, _) =>
+          detectionResult.result.exists { case (a2, _) => allele == a2 }
+      })
+    }
+
     Variant(
       region.contig,
       position,
@@ -121,8 +133,9 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       genotypes1,
       annotations.toList,
       genotypes.map { case (_, g) => g }.toList,
-      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1),
-      externalGenotypes
+      detectionResult,
+      externalGenotypes,
+      externalDetetcionResults
     )
   }
 }

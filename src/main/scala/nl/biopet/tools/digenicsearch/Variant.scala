@@ -23,14 +23,16 @@ package nl.biopet.tools.digenicsearch
 
 import nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult
 
-case class Variant(contig: String,
-                   pos: Int,
-                   alleles: List[String],
-                   genotypes: List[Genotype],
-                   annotations: List[AnnotationValue] = List(),
-                   genotypeAnnotation: List[GenotypeAnnotation],
-                   detectionResult: DetectionMode.DetectionResult,
-                   externalGenotypes: Array[List[Genotype]]) {
+case class Variant(
+    contig: String,
+    pos: Int,
+    alleles: List[String],
+    genotypes: List[Genotype],
+    annotations: List[AnnotationValue] = List(),
+    genotypeAnnotation: List[GenotypeAnnotation],
+    detectionResult: DetectionMode.DetectionResult,
+    externalGenotypes: Array[List[Genotype]],
+    externalDetectionResult: Array[DetectionMode.DetectionResult]) {
 
   def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
 
@@ -45,21 +47,44 @@ case class Variant(contig: String,
         Variant.unaffectedFraction(unaffectedGenotypes))
     }
 
-    val filter = result
+    val teRemove = result
       .filter {
         case (_, f) =>
-          f.unaffected <= broadcasts.fractionsCutoffs.singleUnaffectedFraction
+          !(f.unaffected <= broadcasts.fractionsCutoffs.singleUnaffectedFraction) || !(f.affected >= broadcasts.fractionsCutoffs.singleAffectedFraction)
       }
-      .filter {
-        case (_, f) =>
-          f.affected >= broadcasts.fractionsCutoffs.singleAffectedFraction
-      }
+      .map { case (a, _) => a }
+      .toSet
 
-    if (filter.nonEmpty) {
-      Some(
-        this.copy(detectionResult =
-          DetectionResult(filter.keys.map(k => k -> alleles(k)).toList)))
-    } else None
+    removeAlleles(teRemove)
+  }
+
+  def filterExternalFractions(broadcasts: Broadcasts): Option[Variant] = {
+
+    val toRemove = (for {
+      (dr, filters) <- externalDetectionResult.zip(
+        broadcasts.singleExternalFilters)
+      (allele, result) <- dr.result
+    } yield {
+      val fraction = result.count(_ == true).toDouble / result.length
+      if (result.isEmpty || filters.forall { filter =>
+            filter.method(fraction)
+          }) None
+      else Option(allele)
+    }).flatten.toSet
+    removeAlleles(toRemove)
+  }
+
+  private def removeAlleles(removeAlleles: Set[List[Short]]): Option[Variant] = {
+    val dr = DetectionResult(this.detectionResult.result.filter {
+      case (allele, _) => !removeAlleles.contains(allele)
+    })
+    val edr = externalDetectionResult.map(x =>
+      DetectionResult(x.result.filter {
+        case (allele, _) => !removeAlleles.contains(allele)
+      }))
+    if (dr.result.nonEmpty)
+      Some(this.copy(detectionResult = dr, externalDetectionResult = edr))
+    else None
   }
 }
 
