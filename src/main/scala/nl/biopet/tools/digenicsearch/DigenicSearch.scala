@@ -73,13 +73,12 @@ object DigenicSearch extends ToolCommand[Args] {
       createVariantCombinations(variants, indexCombination, broadcasts)
     val combinationFilter =
       filterVariantCombinations(variantCombinations, broadcasts)
-        .map(_.cleanResults)
+        .map(_.toResultLine)
         //.repartition(500)
         //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
 
-    combinationFilter.write.parquet(
-      outputFile(cmdArgs.outputDir).getAbsolutePath)
+    combinationFilter.write.csv(outputFile(cmdArgs.outputDir).getAbsolutePath)
 
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
@@ -148,43 +147,13 @@ object DigenicSearch extends ToolCommand[Args] {
       implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
 
-    val bla = combinations
+    combinations
       .filter(pairedFilter(_, broadcasts.value.pairFilters))
       .flatMap { x =>
         Variant.filterPairFraction(x,
                                    broadcasts.value.pedigree,
                                    broadcasts.value.fractionsCutoffs)
       }
-
-//    combinations
-//      .flatMap { x =>
-//        val same = x.i1.idx == x.i2.idx
-//        (for {
-//          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-//          (v2, id2) <- x.i2.variants.zipWithIndex
-//          if (!same || id1 < id2) && distanceFilter(
-//            v1,
-//            v2,
-//            broadcasts.value.maxDistance) &&
-//            pairedFilter(v1, v2, broadcasts.value.pairFilters) &&
-//            Variant
-//              .filterPairFraction(v1,
-//                                  v2,
-//                                  broadcasts.value.pedigree,
-//                                  broadcasts.value.fractionsCutoffs)
-//              .isDefined
-//        } yield {
-//          Variant
-//            .filterPairFraction(v1,
-//                                v2,
-//                                broadcasts.value.pedigree,
-//                                broadcasts.value.fractionsCutoffs)
-//            .map {
-//              case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos)
-//            }
-//        }).flatten
-//      }
-    bla
   }
 
   def variantsRdd(

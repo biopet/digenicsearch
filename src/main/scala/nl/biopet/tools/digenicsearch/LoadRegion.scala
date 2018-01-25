@@ -91,7 +91,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
           throw new IllegalStateException(
             s"Sample '$sampleId' not found in $records")
       }
-      (Genotype(alleles.toList),
+      (Genotype(alleles.toList.sorted),
        GenotypeAnnotation(genotype.getDP, genotype.getDP))
     }
     val genotypes1 = genotypes.map { case (g, _) => g }.toList
@@ -107,7 +107,8 @@ class LoadRegion(inputReaders: List[VCFFileReader],
                 Genotype(
                   g.getAlleles
                     .map(a => allAllelesString.indexOf(a.toString).toShort)
-                    .toList)
+                    .toList
+                    .sorted)
               }).toList
             else Nil
           } else Nil

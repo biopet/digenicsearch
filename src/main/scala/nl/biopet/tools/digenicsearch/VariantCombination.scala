@@ -53,4 +53,7 @@ case class VariantCombination(v1: Variant,
     )
     this.copy(v1 = newV1, v2 = newV2, alleles = keep)
   }
+
+  def toResultLine: ResultLine =
+    ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
 }
