@@ -45,13 +45,13 @@ package object digenicsearch {
 
   case class Genotype(alleles: List[Short]) {
     def isReference: Boolean = alleles.forall(_ == 0)
+    def isNoCall: Boolean = alleles.forall(_ < 0)
   }
 
   case class GenotypeAnnotation(dp: Int, gq: Int)
 
   case class PedigreeFraction(affected: Double, unaffected: Double)
 
-  case class VariantCombination(v1: Variant, v2: Variant, alleles: List[AlleleCombination])
   case class AlleleCombination(a1: List[Short], a2: List[Short])
 
   case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int)

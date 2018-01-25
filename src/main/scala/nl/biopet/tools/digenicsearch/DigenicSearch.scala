@@ -69,10 +69,13 @@ object DigenicSearch extends ToolCommand[Args] {
     val indexCombination: Dataset[Combination] =
       createCombinations(regionsRdd, broadcasts).toDS()
 
-    val variantCombinations = createVariantCombinations(variants, indexCombination, broadcasts)
-    val combinationFilter = filterVariantCombinations(variantCombinations, broadcasts).map(_.cleanResults)
-      //.repartition(500)
-      //.sort("contig1", "contig2", "pos1", "pos2")
+    val variantCombinations =
+      createVariantCombinations(variants, indexCombination, broadcasts)
+    val combinationFilter =
+      filterVariantCombinations(variantCombinations, broadcasts)
+        .map(_.cleanResults)
+        //.repartition(500)
+        //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
 
     combinationFilter.write.parquet(
@@ -80,7 +83,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
-      combinationFilter.count())
+                   combinationFilter.count())
 
     sc.stop()
     logger.info("Done")
@@ -119,7 +122,7 @@ object DigenicSearch extends ToolCommand[Args] {
   def createVariantCombinations(variants: Dataset[IndexedVariantsList],
                                 indexCombination: Dataset[Combination],
                                 broadcasts: Broadcast[Broadcasts])(
-                                 implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
     val singleCombination = indexCombination
       .joinWith(variants, indexCombination("i1") === variants("idx"))
@@ -135,7 +138,8 @@ object DigenicSearch extends ToolCommand[Args] {
         (v2, id2) <- x.i2.variants.zipWithIndex
         if (!same || id1 < id2) &&
           distanceFilter(v1, v2, broadcasts.value.maxDistance)
-      } yield VariantCombination(v1, v2, Variant.alleleCombinations(v1,v2).toList)
+      } yield
+        VariantCombination(v1, v2, Variant.alleleCombinations(v1, v2).toList)
     }
   }
 
@@ -146,7 +150,11 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val bla = combinations
       .filter(pairedFilter(_, broadcasts.value.pairFilters))
-      .flatMap { x => Variant.filterPairFraction(x, broadcasts.value.pedigree, broadcasts.value.fractionsCutoffs)}
+      .flatMap { x =>
+        Variant.filterPairFraction(x,
+                                   broadcasts.value.pedigree,
+                                   broadcasts.value.fractionsCutoffs)
+      }
 
 //    combinations
 //      .flatMap { x =>

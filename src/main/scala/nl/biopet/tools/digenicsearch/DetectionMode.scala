@@ -31,21 +31,25 @@ object DetectionMode extends Enumeration {
   implicit def valueToVal(x: Value): Val = x.asInstanceOf[Val]
 
   val Varant = Val { alleles =>
-    DetectionResult(
-      List(Nil -> alleles.map(genotype => !genotype.isReference)))
+    DetectionResult(List(Nil -> alleles.map(genotype =>
+      !genotype.isReference && !genotype.isNoCall)))
   }
 
   val Allele = Val { alleles =>
     DetectionResult(
-      alleles.flatMap(_.alleles).filter(_ != 0).distinct.map { key =>
+      alleles.flatMap(_.alleles).filter(_ > 0).distinct.map { key =>
         List(key) -> alleles.map(_.alleles.contains(key))
       })
   }
 
   val Genotype = Val { alleles =>
     DetectionResult(
-      alleles.filter(!_.isReference).map(_.alleles).distinct.map { g =>
-        g -> alleles.map(_.alleles == g)
-      })
+      alleles
+        .filter(genotype => !genotype.isReference && !genotype.isNoCall)
+        .map(_.alleles)
+        .distinct
+        .map { g =>
+          g -> alleles.map(_.alleles == g)
+        })
   }
 }
