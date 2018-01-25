@@ -69,18 +69,18 @@ object DigenicSearch extends ToolCommand[Args] {
     val indexCombination: Dataset[Combination] =
       createCombinations(regionsRdd, broadcasts).toDS()
 
-    val variantCombinations =
-      createVariantCombinations(variants, indexCombination, broadcasts)
+    val variantCombinations = createVariantCombinations(variants, indexCombination, broadcasts)
+    val combinationFilter = filterVariantCombinations(variantCombinations, broadcasts).map(_.cleanResults)
       //.repartition(500)
       //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
 
-    variantCombinations.write.parquet(
+    combinationFilter.write.parquet(
       outputFile(cmdArgs.outputDir).getAbsolutePath)
 
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
-                   variantCombinations.count())
+      combinationFilter.count())
 
     sc.stop()
     logger.info("Done")
@@ -119,43 +119,64 @@ object DigenicSearch extends ToolCommand[Args] {
   def createVariantCombinations(variants: Dataset[IndexedVariantsList],
                                 indexCombination: Dataset[Combination],
                                 broadcasts: Broadcast[Broadcasts])(
-      implicit sparkSession: SparkSession): Dataset[ResultLine] = {
+                                 implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
     val singleCombination = indexCombination
       .joinWith(variants, indexCombination("i1") === variants("idx"))
       .map { case (c, v) => CombinationSingle(v, c.i2) }
-    val combinations: Dataset[CombinationVariantList] = singleCombination
+    val combinationLists: Dataset[CombinationVariantList] = singleCombination
       .joinWith(variants, singleCombination("i2") === variants("idx"))
       .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
-    combinations
-      .flatMap { x =>
-        val same = x.i1.idx == x.i2.idx
-        (for {
-          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-          (v2, id2) <- x.i2.variants.zipWithIndex
-          if (!same || id1 < id2) && distanceFilter(
-            v1,
-            v2,
-            broadcasts.value.maxDistance) &&
-            pairedFilter(v1, v2, broadcasts.value.pairFilters) &&
-            Variant
-              .filterPairFraction(v1,
-                                  v2,
-                                  broadcasts.value.pedigree,
-                                  broadcasts.value.fractionsCutoffs)
-              .isDefined
-        } yield {
-          Variant
-            .filterPairFraction(v1,
-                                v2,
-                                broadcasts.value.pedigree,
-                                broadcasts.value.fractionsCutoffs)
-            .map {
-              case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos)
-            }
-        }).flatten
-      }
+    combinationLists.flatMap { x =>
+      val same = x.i1.idx == x.i2.idx
+      for {
+        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+        (v2, id2) <- x.i2.variants.zipWithIndex
+        if (!same || id1 < id2) &&
+          distanceFilter(v1, v2, broadcasts.value.maxDistance)
+      } yield VariantCombination(v1, v2, Variant.alleleCombinations(v1,v2).toList)
+    }
+  }
+
+  def filterVariantCombinations(combinations: Dataset[VariantCombination],
+                                broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+    import sparkSession.implicits._
+
+    val bla = combinations
+      .filter(pairedFilter(_, broadcasts.value.pairFilters))
+      .flatMap { x => Variant.filterPairFraction(x, broadcasts.value.pedigree, broadcasts.value.fractionsCutoffs)}
+
+//    combinations
+//      .flatMap { x =>
+//        val same = x.i1.idx == x.i2.idx
+//        (for {
+//          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+//          (v2, id2) <- x.i2.variants.zipWithIndex
+//          if (!same || id1 < id2) && distanceFilter(
+//            v1,
+//            v2,
+//            broadcasts.value.maxDistance) &&
+//            pairedFilter(v1, v2, broadcasts.value.pairFilters) &&
+//            Variant
+//              .filterPairFraction(v1,
+//                                  v2,
+//                                  broadcasts.value.pedigree,
+//                                  broadcasts.value.fractionsCutoffs)
+//              .isDefined
+//        } yield {
+//          Variant
+//            .filterPairFraction(v1,
+//                                v2,
+//                                broadcasts.value.pedigree,
+//                                broadcasts.value.fractionsCutoffs)
+//            .map {
+//              case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos)
+//            }
+//        }).flatten
+//      }
+    bla
   }
 
   def variantsRdd(
@@ -183,10 +204,9 @@ object DigenicSearch extends ToolCommand[Args] {
   }
 
   /** This filters if 1 of the 2 variants returns true */
-  def pairedFilter(v1: Variant,
-                   v2: Variant,
+  def pairedFilter(combination: VariantCombination,
                    pairFilters: List[AnnotationFilter]): Boolean = {
-    val list = List(v1, v2)
+    val list = List(combination.v1, combination.v2)
     pairFilters.isEmpty ||
     pairFilters.forall { c =>
       list.exists(

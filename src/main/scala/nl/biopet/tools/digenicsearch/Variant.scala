@@ -104,35 +104,62 @@ object Variant {
       .toDouble / affectedGenotypes.length
   }
 
-  def filterPairFraction(
-      v1: Variant,
-      v2: Variant,
-      pedigree: PedigreeFileArray,
-      cutoffs: FractionsCutoffs): Option[(Variant, Variant)] = {
-    val alleles1 = v1.detectionResult.result.toMap
-    val alleles2 = v2.detectionResult.result.toMap
+  def alleleCombinations(v1: Variant, v2: Variant): Iterator[AlleleCombination] = {
+    v1.detectionResult.result.map { case (allele, _) => allele}
+    for {
+      (a1,_) <- v1.detectionResult.result.iterator
+      (a2,_) <- v2.detectionResult.result
+    } yield AlleleCombination(a1, a2)
+  }
 
-    val alleles = (for ((a1, s1) <- alleles1; (a2, s2) <- alleles2) yield {
-      val combined = s1.zip(s2).map { case (c1, c2) => c1 && c2 }
+  def filterPairFraction(
+      combination: VariantCombination,
+      pedigree: PedigreeFileArray,
+      cutoffs: FractionsCutoffs): Option[VariantCombination] = {
+
+    val alleles1 = combination.v1.detectionResult.result.toMap
+    val alleles2 = combination.v2.detectionResult.result.toMap
+
+    val newAlleles = combination.alleles.filter { alleles =>
+      val combined = alleles1(alleles.a1).zip(alleles2(alleles.a2)).map { case (c1, c2) => c1 && c2 }
       val affectedGenotypes = pedigree.affectedArray.map(combined)
       val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
 
-      if (unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
-          affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction) {
-        Option((a1, a2))
-      } else None
-    }).flatten
+      unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
+        affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction
+    }
 
-    if (alleles.nonEmpty) {
-      val a1 = alleles.map { case (a, _) => a }.toList.toSet
-      val a2 = alleles.map { case (_, a) => a }.toList.toSet
-      val d1 = DetectionResult(v1.detectionResult.result.filter {
-        case (a, _) => a1.contains(a)
-      })
-      val d2 = DetectionResult(v2.detectionResult.result.filter {
-        case (a, _) => a2.contains(a)
-      })
-      Option((v1.copy(detectionResult = d1), v2.copy(detectionResult = d2)))
-    } else None
+
+
+    //TODO: remove alleles from results
+//    val alleles = (for ((a1, s1) <- alleles1; (a2, s2) <- alleles2) yield {
+//      val combined = s1.zip(s2).map { case (c1, c2) => c1 && c2 }
+//      val affectedGenotypes = pedigree.affectedArray.map(combined)
+//      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
+//
+//      if (unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
+//          affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction) {
+//        Option((a1, a2))
+//      } else None
+//    }).flatten
+//
+//    if (alleles.nonEmpty) {
+//      val a1 = alleles.map { case (a, _) => a }.toList.toSet
+//      val a2 = alleles.map { case (_, a) => a }.toList.toSet
+//      val d1 = DetectionResult(v1.detectionResult.result.filter {
+//        case (a, _) => a1.contains(a)
+//      })
+//      val d2 = DetectionResult(v2.detectionResult.result.filter {
+//        case (a, _) => a2.contains(a)
+//      })
+//      Option((v1.copy(detectionResult = d1), v2.copy(detectionResult = d2)))
+//    } else None
+
+    if (newAlleles.nonEmpty) Some(combination.copy(alleles = newAlleles))
+    else None
+  }
+
+  def filterExternalPair(combination: VariantCombination, broadcasts: Broadcasts): Option[VariantCombination] = {
+    ???
   }
 }
