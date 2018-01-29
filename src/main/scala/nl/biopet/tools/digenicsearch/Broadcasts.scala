@@ -37,6 +37,7 @@ case class Broadcasts(samples: Array[String],
                       detectionMode: DetectionMode.Value,
                       regions: Array[List[Region]],
                       externalFiles: Array[File],
+                      externalFilesKeys: Array[String],
                       singleExternalFilters: Array[List[ExternalFilter]],
                       pairExternalFilters: Array[List[ExternalFilter]])
 
@@ -101,6 +102,7 @@ object Broadcasts {
       cmdArgs.detectionMode,
       generateRegions(cmdArgs).toArray,
       externalFiles,
+      externalFilesKeys.map { case (key, _) => key },
       singleExternalFilters,
       pairExternalFilters
     )

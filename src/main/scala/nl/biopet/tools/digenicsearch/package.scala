@@ -52,8 +52,18 @@ package object digenicsearch {
 
   case class PedigreeFraction(affected: Double, unaffected: Double)
 
-  case class AlleleCombination(a1: List[Short], a2: List[Short])
+  case class AlleleCombination(a1: List[Short], a2: List[Short]) {
+    override def toString: String = {
+      def alleleToString(a: List[Short]) =
+        if (a.nonEmpty) a.mkString("/") else "."
+      s"(${alleleToString(a1)},${alleleToString(a2)})"
+    }
+  }
 
-  case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int)
+  case class ResultLine(contig1: String,
+                        pos1: Int,
+                        contig2: String,
+                        pos2: Int,
+                        externalFractions: String)
 
 }

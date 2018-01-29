@@ -107,6 +107,16 @@ case class VariantCombination(v1: Variant,
     }
   }
 
-  def toResultLine: ResultLine =
-    ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
+  def toResultLine(externalKeys: Array[String]): ResultLine = {
+    val externalFractions: String = v1.externalDetectionResult.indices
+      .map(
+        idx =>
+          externalKeys(idx) + ":" + this
+            .externalFractions(idx)
+            .zipWithIndex
+            .map { case ((c, f), _) => c.toString + s"=$f" }
+            .mkString("(", ";", ")"))
+      .mkString(";")
+    ResultLine(v1.contig, v1.pos, v2.contig, v2.pos, externalFractions)
+  }
 }
