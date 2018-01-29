@@ -78,7 +78,7 @@ object Broadcasts {
     }
     val pairExternalFilters = externalFilesKeys.zipWithIndex.map {
       case ((key, file), idx) =>
-        cmdArgs.singleExternalFilters
+        cmdArgs.pairExternalFilters
           .filter(_.key == key)
           .map(f => ExternalFilter(key, idx, f.method))
     }

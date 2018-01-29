@@ -54,6 +54,51 @@ case class VariantCombination(v1: Variant,
     this.copy(v1 = newV1, v2 = newV2, alleles = keep)
   }
 
+  def filterPairFraction(
+      pedigree: PedigreeFileArray,
+      cutoffs: FractionsCutoffs): Option[VariantCombination] = {
+
+    val alleles1 = v1.detectionResult.result.toMap
+    val alleles2 = v2.detectionResult.result.toMap
+
+    val newAlleles = alleles.filter { alleles =>
+      val combined = alleles1(alleles.a1).zip(alleles2(alleles.a2)).map {
+        case (c1, c2) => c1 && c2
+      }
+      val affectedGenotypes = pedigree.affectedArray.map(combined)
+      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
+
+      Variant.unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
+      Variant.affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction
+    }
+
+    if (newAlleles.nonEmpty) Some(this.copy(alleles = newAlleles))
+    else None
+  }
+
+  def filterExternalPair(broadcasts: Broadcasts): Option[VariantCombination] = {
+
+    val newAlleles = alleles.filter { alleles =>
+      v1.externalDetectionResult
+        .zip(v2.externalDetectionResult)
+        .zipWithIndex
+        .forall {
+          case ((a1, a2), idx) =>
+            val alleles1 = a1.result.toMap
+            val alleles2 = a2.result.toMap
+
+            val allSamples = alleles1(alleles.a1).zip(alleles2(alleles.a2))
+            val fraction = allSamples.count { case (a, b) => a && b }.toDouble / allSamples.length
+            broadcasts
+              .pairExternalFilters(idx)
+              .forall(filter => filter.method(fraction))
+        }
+    }
+
+    if (newAlleles.nonEmpty) Some(this.copy(alleles = newAlleles))
+    else None
+  }
+
   def toResultLine: ResultLine =
     ResultLine(v1.contig, v1.pos, v2.contig, v2.pos)
 }

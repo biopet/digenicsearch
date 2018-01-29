@@ -90,7 +90,7 @@ case class Variant(
 
 object Variant {
 
-  private def unaffectedFraction(unaffectedGenotypes: Array[Boolean]) = {
+  def unaffectedFraction(unaffectedGenotypes: Array[Boolean]): Double = {
     if (unaffectedGenotypes.nonEmpty) {
       unaffectedGenotypes
         .count(_ == true)
@@ -98,7 +98,7 @@ object Variant {
     } else 0.0
   }
 
-  private def affectedFraction(affectedGenotypes: Array[Boolean]) = {
+  def affectedFraction(affectedGenotypes: Array[Boolean]): Double = {
     affectedGenotypes
       .count(_ == true)
       .toDouble / affectedGenotypes.length
@@ -111,53 +111,5 @@ object Variant {
       (a1, _) <- v1.detectionResult.result.iterator
       (a2, _) <- v2.detectionResult.result
     } yield AlleleCombination(a1, a2)
-  }
-
-  def filterPairFraction(
-      combination: VariantCombination,
-      pedigree: PedigreeFileArray,
-      cutoffs: FractionsCutoffs): Option[VariantCombination] = {
-
-    val alleles1 = combination.v1.detectionResult.result.toMap
-    val alleles2 = combination.v2.detectionResult.result.toMap
-
-    val newAlleles = combination.alleles.filter { alleles =>
-      val combined = alleles1(alleles.a1).zip(alleles2(alleles.a2)).map {
-        case (c1, c2) => c1 && c2
-      }
-      val affectedGenotypes = pedigree.affectedArray.map(combined)
-      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
-
-      unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
-      affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction
-    }
-
-    if (newAlleles.nonEmpty) Some(combination.copy(alleles = newAlleles))
-    else None
-  }
-
-  def filterExternalPair(
-      combination: VariantCombination,
-      broadcasts: Broadcasts): Option[VariantCombination] = {
-
-    val newAlleles = combination.alleles.filter { alleles =>
-      combination.v1.externalDetectionResult
-        .zip(combination.v2.externalDetectionResult)
-        .zipWithIndex
-        .forall {
-          case ((a1, a2), idx) =>
-            val alleles1 = a1.result.toMap
-            val alleles2 = a2.result.toMap
-
-            val allSamples = alleles1(alleles.a1).zip(alleles2(alleles.a2))
-            val fraction = allSamples.count { case (a, b) => a && b }.toDouble / allSamples.length
-            broadcasts
-              .pairExternalFilters(idx)
-              .forall(filter => filter.method(fraction))
-        }
-    }
-
-    if (newAlleles.nonEmpty) Some(combination.copy(alleles = newAlleles))
-    else None
   }
 }

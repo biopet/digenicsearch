@@ -150,14 +150,9 @@ object DigenicSearch extends ToolCommand[Args] {
 
     combinations
       .filter(pairedFilter(_, broadcasts.value.pairFilters))
-      .flatMap { x =>
-        Variant.filterPairFraction(x,
-                                   broadcasts.value.pedigree,
-                                   broadcasts.value.fractionsCutoffs)
-      }
-      .flatMap { x =>
-        Variant.filterExternalPair(x, broadcasts.value)
-      }
+      .flatMap(_.filterPairFraction(broadcasts.value.pedigree,
+                                    broadcasts.value.fractionsCutoffs))
+      .flatMap(_.filterExternalPair(broadcasts.value))
   }
 
   def variantsRdd(
