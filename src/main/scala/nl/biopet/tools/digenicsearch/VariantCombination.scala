@@ -76,7 +76,7 @@ case class VariantCombination(v1: Variant,
     else None
   }
 
-  def externalFractions(idx: Int): Map[AlleleCombination, Double] = {
+  def externalFractions(idx: Int): Map[AlleleCombination, Option[Double]] = {
     val alleles1 = this.v1.externalDetectionResult(idx).result.toMap
     val alleles2 = this.v2.externalDetectionResult(idx).result.toMap
 
@@ -86,7 +86,8 @@ case class VariantCombination(v1: Variant,
         case (a, b) =>
           a && b
       }.toDouble / allSamples.length
-      (c, fraction)
+      if (fraction.isNaN) (c, None)
+      else (c, Some(fraction))
     }).toMap
   }
 
@@ -99,7 +100,12 @@ case class VariantCombination(v1: Variant,
           val newAlleles = alleles.filter { a =>
             broadcasts
               .pairExternalFilters(idx)
-              .forall(filter => filter.method(fractions(a)))
+              .forall { filter =>
+                fractions(a) match {
+                  case Some(s) => filter.method(s)
+                  case _ => true
+                }
+              }
           }
           if (newAlleles.nonEmpty) Some(this.copy(alleles = newAlleles))
           else None
