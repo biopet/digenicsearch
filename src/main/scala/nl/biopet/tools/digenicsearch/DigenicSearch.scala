@@ -73,6 +73,7 @@ object DigenicSearch extends ToolCommand[Args] {
       createVariantCombinations(variants, indexCombination, broadcasts)
     val combinationFilter =
       filterVariantCombinations(variantCombinations, broadcasts)
+        .map(_.cleanResults)
         .map(_.toResultLine)
         //.repartition(500)
         //.sort("contig1", "contig2", "pos1", "pos2")
@@ -153,6 +154,9 @@ object DigenicSearch extends ToolCommand[Args] {
         Variant.filterPairFraction(x,
                                    broadcasts.value.pedigree,
                                    broadcasts.value.fractionsCutoffs)
+      }
+      .flatMap { x =>
+        Variant.filterExternalPair(x, broadcasts.value)
       }
   }
 

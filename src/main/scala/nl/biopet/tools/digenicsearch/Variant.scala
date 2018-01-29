@@ -132,30 +132,6 @@ object Variant {
       affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction
     }
 
-    //TODO: remove alleles from results
-//    val alleles = (for ((a1, s1) <- alleles1; (a2, s2) <- alleles2) yield {
-//      val combined = s1.zip(s2).map { case (c1, c2) => c1 && c2 }
-//      val affectedGenotypes = pedigree.affectedArray.map(combined)
-//      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
-//
-//      if (unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
-//          affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction) {
-//        Option((a1, a2))
-//      } else None
-//    }).flatten
-//
-//    if (alleles.nonEmpty) {
-//      val a1 = alleles.map { case (a, _) => a }.toList.toSet
-//      val a2 = alleles.map { case (_, a) => a }.toList.toSet
-//      val d1 = DetectionResult(v1.detectionResult.result.filter {
-//        case (a, _) => a1.contains(a)
-//      })
-//      val d2 = DetectionResult(v2.detectionResult.result.filter {
-//        case (a, _) => a2.contains(a)
-//      })
-//      Option((v1.copy(detectionResult = d1), v2.copy(detectionResult = d2)))
-//    } else None
-
     if (newAlleles.nonEmpty) Some(combination.copy(alleles = newAlleles))
     else None
   }
@@ -163,6 +139,25 @@ object Variant {
   def filterExternalPair(
       combination: VariantCombination,
       broadcasts: Broadcasts): Option[VariantCombination] = {
-    ???
+
+    val newAlleles = combination.alleles.filter { alleles =>
+      combination.v1.externalDetectionResult
+        .zip(combination.v2.externalDetectionResult)
+        .zipWithIndex
+        .forall {
+          case ((a1, a2), idx) =>
+            val alleles1 = a1.result.toMap
+            val alleles2 = a2.result.toMap
+
+            val allSamples = alleles1(alleles.a1).zip(alleles2(alleles.a2))
+            val fraction = allSamples.count { case (a, b) => a && b }.toDouble / allSamples.length
+            broadcasts
+              .pairExternalFilters(idx)
+              .forall(filter => filter.method(fraction))
+        }
+    }
+
+    if (newAlleles.nonEmpty) Some(combination.copy(alleles = newAlleles))
+    else None
   }
 }
