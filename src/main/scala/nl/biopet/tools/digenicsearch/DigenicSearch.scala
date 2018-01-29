@@ -63,7 +63,10 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val variants: Dataset[IndexedVariantsList] =
       variantsRdd(regionsRdd, broadcasts).toDS().cache()
-    variants.flatMap(_.variants.map(_.toCsv(broadcasts.value))).write.csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
+    variants
+      .flatMap(_.variants.map(_.toCsv(broadcasts.value)))
+      .write
+      .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
 
     val singleFilterTotal = countSingleFilterTotal(variants)
 
@@ -95,9 +98,9 @@ object DigenicSearch extends ToolCommand[Args] {
 
   def checkExistsOutput(outputDir: File): Unit = {
     require(!outputPairs(outputDir).exists(),
-      s"Output file already exists: ${outputPairs(outputDir)}")
+            s"Output file already exists: ${outputPairs(outputDir)}")
     require(!outputVariants(outputDir).exists(),
-      s"Output file already exists: ${outputVariants(outputDir)}")
+            s"Output file already exists: ${outputVariants(outputDir)}")
   }
 
   def writeStatsFile(outputDir: File,

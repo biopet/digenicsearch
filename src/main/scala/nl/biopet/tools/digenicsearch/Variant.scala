@@ -35,15 +35,34 @@ case class Variant(
     externalDetectionResult: Array[DetectionMode.DetectionResult]) {
 
   def toCsv(broadcasts: Broadcasts): VariantCsv = {
-    //TODO: add fractions
-    val pedigreeFractions = getPedigreeFractions(broadcasts).map { case (k,v) =>
-        val allele = if (k.isEmpty) "." else k.mkString("/")
-        s"$allele=(a=${v.affected};u=${v.unaffected})"
-    }.mkString(",")
-    VariantCsv(contig, pos, alleles.mkString(","), pedigreeFractions, "")
+    val pedigreeFractions = getPedigreeFractions(broadcasts)
+      .map {
+        case (k, v) =>
+          val allele = if (k.isEmpty) "." else k.mkString("/")
+          s"$allele=(a=${v.affected};u=${v.unaffected})"
+      }
+      .mkString(",")
+    val externalFractions = getExternalFractions.zipWithIndex
+      .map {
+        case (map, idx) =>
+          broadcasts.externalFilesKeys(idx) + map
+            .map {
+              case (k, v) =>
+                (if (k.isEmpty) "."
+                 else k.mkString("/")) + "=" + v.getOrElse("0.0")
+            }
+            .mkString("(", ",", ")")
+      }
+      .mkString(";")
+    VariantCsv(contig,
+               pos,
+               alleles.mkString(","),
+               pedigreeFractions,
+               externalFractions)
   }
 
-  def getPedigreeFractions(broadcasts: Broadcasts): Map[List[Short], PedigreeFraction] = {
+  def getPedigreeFractions(
+      broadcasts: Broadcasts): Map[List[Short], PedigreeFraction] = {
     val alleles = detectionResult.result.toMap
 
     for ((allele, result) <- alleles) yield {
@@ -55,7 +74,6 @@ case class Variant(
         Variant.unaffectedFraction(unaffectedGenotypes))
     }
   }
-
 
   def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
 
@@ -74,18 +92,32 @@ case class Variant(
     removeAlleles(teRemove)
   }
 
+  def getExternalFractions: Array[Map[List[Short], Option[Double]]] = {
+    externalDetectionResult.map { d =>
+      d.result.toMap.map {
+        case (k, v) =>
+          if (v.isEmpty) k -> None
+          else k -> Some(v.count(_ == true).toDouble / v.length)
+      }
+    }
+  }
+
   def filterExternalFractions(broadcasts: Broadcasts): Option[Variant] = {
 
+    val fractions = getExternalFractions
+
     val toRemove = (for {
-      (dr, filters) <- externalDetectionResult.zip(
-        broadcasts.singleExternalFilters)
-      (allele, result) <- dr.result
+      (dr, filters) <- fractions.zip(broadcasts.singleExternalFilters)
+      (allele, fraction) <- dr
     } yield {
-      val fraction = result.count(_ == true).toDouble / result.length
-      if (result.isEmpty || filters.forall { filter =>
-            filter.method(fraction)
-          }) None
-      else Option(allele)
+      fraction match {
+        case Some(f) =>
+          if (filters.forall { filter =>
+                filter.method(f)
+              }) None
+          else Some(allele)
+        case _ => None
+      }
     }).flatten.toSet
     removeAlleles(toRemove)
   }
