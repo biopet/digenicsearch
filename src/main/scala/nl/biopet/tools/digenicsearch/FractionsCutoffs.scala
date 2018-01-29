@@ -24,44 +24,4 @@ package nl.biopet.tools.digenicsearch
 case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
                             pairAffectedFraction: Double = 1.0,
                             singleUnaffectedFraction: Double = 0,
-                            pairUnaffectedFraction: Double = 0) {
-
-  def singleFractionFilter(variant: Variant,
-                           pedigree: PedigreeFileArray): Boolean = {
-    val result = FractionsCutoffs.getFraction(variant, pedigree)
-    result.affected >= singleAffectedFraction && result.unaffected <= singleUnaffectedFraction
-  }
-
-  def pairFractionFilter(v1: Variant,
-                         v2: Variant,
-                         pedigree: PedigreeFileArray): Boolean = {
-    val result1 = FractionsCutoffs.getFraction(v1, pedigree)
-    val result2 = FractionsCutoffs.getFraction(v2, pedigree)
-
-    (result1.affected >= pairAffectedFraction && result1.unaffected <= pairUnaffectedFraction) ||
-    (result2.affected >= pairAffectedFraction && result2.unaffected <= pairUnaffectedFraction)
-  }
-}
-
-object FractionsCutoffs {
-
-  protected case class Result(unaffected: Double, affected: Double)
-
-  def getFraction(variant: Variant, pedigree: PedigreeFileArray): Result = {
-    val affectedGenotypes = pedigree.affectedArray.map(variant.genotypes)
-    val unaffectedGenotypes = pedigree.unaffectedArray.map(variant.genotypes)
-
-    val unaffectedFraction =
-      if (unaffectedGenotypes.nonEmpty)
-        unaffectedGenotypes
-          .count(!_.isReference)
-          .toDouble / unaffectedGenotypes.length
-      else 0.0
-    val affectedFraction = affectedGenotypes
-      .count(!_.isReference)
-      .toDouble / affectedGenotypes.length
-
-    Result(unaffectedFraction, affectedFraction)
-  }
-
-}
+                            pairUnaffectedFraction: Double = 0)

@@ -21,26 +21,31 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
+import scala.language.implicitConversions
 
-import nl.biopet.utils.ngs.ped.{PedigreeFile, PedigreeSample, Phenotype}
+object DetectionMode extends Enumeration {
+  case class DetectionResult(result: List[(List[Short], List[Boolean])])
 
-case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
-  val pedArray: Array[PedigreeSample] = samples.flatMap(pedFile.samples.get)
-  val affectedArray: Array[Int] = pedArray.zipWithIndex
-    .filter { case (p, _) => p.phenotype == Phenotype.Affected }
-    .map { case (_, idx) => idx }
-  val unaffectedArray: Array[Int] = pedArray.zipWithIndex
-    .filter { case (p, _) => p.phenotype == Phenotype.Unaffected }
-    .map { case (_, idx) => idx }
-}
+  protected case class Val(method: List[Genotype] => DetectionResult)
+      extends super.Val
+  implicit def valueToVal(x: Value): Val = x.asInstanceOf[Val]
 
-object PedigreeFileArray {
-  def fromFiles(files: List[File], samples: Array[String]): PedigreeFileArray = {
-    val pedSamples = files.map(PedigreeFile.fromFile).reduce(_ + _)
-    PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter {
-      case (s, _) =>
-        samples.contains(s)
-    }), samples)
+  val Varant = Val { alleles =>
+    DetectionResult(
+      List(Nil -> alleles.map(genotype => !genotype.isReference)))
+  }
+
+  val Allele = Val { alleles =>
+    DetectionResult(
+      alleles.flatMap(_.alleles).filter(_ != 0).distinct.map { key =>
+        List(key) -> alleles.map(_.alleles.contains(key))
+      })
+  }
+
+  val Genotype = Val { alleles =>
+    DetectionResult(
+      alleles.filter(!_.isReference).map(_.alleles).distinct.map { g =>
+        g -> alleles.map(_.alleles == g)
+      })
   }
 }

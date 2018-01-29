@@ -35,14 +35,21 @@ package object digenicsearch {
   case class AnnotationFilter(key: String, method: Double => Boolean)
 
   case class AnnotationValue(key: String, value: List[Double])
-  case class Variant(contig: String,
-                     pos: Int,
-                     alleles: List[String],
-                     genotypes: List[Genotype],
-                     annotations: List[AnnotationValue] = List())
 
-  case class Genotype(alleles: List[Short], dp: Int, gq: Int) {
+  case class Combination(i1: Int, i2: Int)
+  case class CombinationSingle(i1: IndexedVariantsList, i2: Int)
+  case class CombinationVariantList(i1: IndexedVariantsList,
+                                    i2: IndexedVariantsList)
+  case class IndexedVariantsList(idx: Int, variants: List[Variant])
+
+  case class Genotype(alleles: List[Short]) {
     def isReference: Boolean = alleles.forall(_ == 0)
   }
+
+  case class GenotypeAnnotation(dp: Int, gq: Int)
+
+  case class PedigreeFraction(affected: Double, unaffected: Double)
+
+  case class ResultLine(contig1: String, pos1: Int, contig2: String, pos2: Int)
 
 }

@@ -36,4 +36,23 @@ class ArgparserTest extends BiopetTest {
 
     DigenicSearch.cmdArrayToArgs(args).maxContigsInSingleJob shouldBe 300
   }
+
+  @Test
+  def testDetectionMode(): Unit = {
+    def args(mode: String) = Array("-R",
+      resourcePath("/reference.fasta"),
+      "-o",
+      "./",
+      "-i",
+      resourcePath("/wgs2.vcf.gz"),
+      "-p",
+      resourcePath("/wgs2.ped"), "--detectionMode", mode)
+
+    DigenicSearch.cmdArrayToArgs(args("Allele")).detectionMode shouldBe DetectionMode.Allele
+    DigenicSearch.cmdArrayToArgs(args("allele")).detectionMode shouldBe DetectionMode.Allele
+
+    intercept[IllegalArgumentException] {
+      DigenicSearch.cmdArrayToArgs(args("sadfhaslf"))
+    }
+  }
 }
