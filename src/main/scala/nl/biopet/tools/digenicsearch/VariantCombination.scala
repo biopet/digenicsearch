@@ -76,27 +76,35 @@ case class VariantCombination(v1: Variant,
     else None
   }
 
+  def externalFractions(idx: Int): Map[AlleleCombination, Double] = {
+    val alleles1 = this.v1.externalDetectionResult(idx).result.toMap
+    val alleles2 = this.v2.externalDetectionResult(idx).result.toMap
+
+    (for (c <- alleles.toIterator) yield {
+      val allSamples = alleles1(c.a1).zip(alleles2(c.a2))
+      val fraction = allSamples.count {
+        case (a, b) =>
+          a && b
+      }.toDouble / allSamples.length
+      (c, fraction)
+    }).toMap
+  }
+
   def filterExternalPair(broadcasts: Broadcasts): Option[VariantCombination] = {
 
-    val newAlleles = alleles.filter { alleles =>
-      v1.externalDetectionResult
-        .zip(v2.externalDetectionResult)
-        .zipWithIndex
-        .forall {
-          case ((a1, a2), idx) =>
-            val alleles1 = a1.result.toMap
-            val alleles2 = a2.result.toMap
-
-            val allSamples = alleles1(alleles.a1).zip(alleles2(alleles.a2))
-            val fraction = allSamples.count { case (a, b) => a && b }.toDouble / allSamples.length
+    broadcasts.externalFiles.zipWithIndex.foldLeft(Option(this)) {
+      case (c, (_, idx)) =>
+        c.flatMap { x =>
+          val fractions = externalFractions(idx)
+          val newAlleles = alleles.filter { a =>
             broadcasts
               .pairExternalFilters(idx)
-              .forall(filter => filter.method(fraction))
+              .forall(filter => filter.method(fractions(a)))
+          }
+          if (newAlleles.nonEmpty) Some(this.copy(alleles = newAlleles))
+          else None
         }
     }
-
-    if (newAlleles.nonEmpty) Some(this.copy(alleles = newAlleles))
-    else None
   }
 
   def toResultLine: ResultLine =
