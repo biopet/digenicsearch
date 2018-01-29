@@ -63,6 +63,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val variants: Dataset[IndexedVariantsList] =
       variantsRdd(regionsRdd, broadcasts).toDS().cache()
+    variants.flatMap(_.variants.map(_.toCsv(broadcasts.value))).write.csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
 
     val singleFilterTotal = countSingleFilterTotal(variants)
 
@@ -79,7 +80,7 @@ object DigenicSearch extends ToolCommand[Args] {
         //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
 
-    combinationFilter.write.csv(outputFile(cmdArgs.outputDir).getAbsolutePath)
+    combinationFilter.write.csv(outputPairs(cmdArgs.outputDir).getAbsolutePath)
 
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
@@ -89,11 +90,14 @@ object DigenicSearch extends ToolCommand[Args] {
     logger.info("Done")
   }
 
-  def outputFile(outputDir: File): File = new File(outputDir, "pairs")
+  def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
+  def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
   def checkExistsOutput(outputDir: File): Unit = {
-    require(!outputFile(outputDir).exists(),
-            s"Output file already exists: ${outputFile(outputDir)}")
+    require(!outputPairs(outputDir).exists(),
+      s"Output file already exists: ${outputPairs(outputDir)}")
+    require(!outputVariants(outputDir).exists(),
+      s"Output file already exists: ${outputVariants(outputDir)}")
   }
 
   def writeStatsFile(outputDir: File,

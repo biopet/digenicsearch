@@ -34,11 +34,19 @@ case class Variant(
     externalGenotypes: Array[List[Genotype]],
     externalDetectionResult: Array[DetectionMode.DetectionResult]) {
 
-  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
+  def toCsv(broadcasts: Broadcasts): VariantCsv = {
+    //TODO: add fractions
+    val pedigreeFractions = getPedigreeFractions(broadcasts).map { case (k,v) =>
+        val allele = if (k.isEmpty) "." else k.mkString("/")
+        s"$allele=(a=${v.affected};u=${v.unaffected})"
+    }.mkString(",")
+    VariantCsv(contig, pos, alleles.mkString(","), pedigreeFractions, "")
+  }
 
+  def getPedigreeFractions(broadcasts: Broadcasts): Map[List[Short], PedigreeFraction] = {
     val alleles = detectionResult.result.toMap
 
-    val result = for ((allele, result) <- alleles) yield {
+    for ((allele, result) <- alleles) yield {
       val affectedGenotypes = broadcasts.pedigree.affectedArray.map(result)
       val unaffectedGenotypes = broadcasts.pedigree.unaffectedArray.map(result)
 
@@ -46,6 +54,14 @@ case class Variant(
         Variant.affectedFraction(affectedGenotypes),
         Variant.unaffectedFraction(unaffectedGenotypes))
     }
+  }
+
+
+  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
+
+    val alleles = detectionResult.result.toMap
+
+    val result = this.getPedigreeFractions(broadcasts)
 
     val teRemove = result
       .filter {

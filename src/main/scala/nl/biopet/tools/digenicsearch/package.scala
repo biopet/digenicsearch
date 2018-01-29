@@ -60,6 +60,12 @@ package object digenicsearch {
     }
   }
 
+  case class VariantCsv(contig: String,
+                        pos: Int,
+                        alleles: String,
+                        pedigreeFractions: String,
+                        externalFractions: String)
+
   case class ResultLine(contig1: String,
                         pos1: Int,
                         contig2: String,
