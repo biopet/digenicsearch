@@ -120,7 +120,7 @@ case class VariantCombination(v1: Variant,
           externalKeys(idx) + ":" + this
             .externalFractions(idx)
             .zipWithIndex
-            .map { case ((c, f), _) => c.toString + s"=$f" }
+            .map { case ((c, f), _) => c.toString + s"=${f.getOrElse(0.0)}" }
             .mkString("(", ";", ")"))
       .mkString(";")
     ResultLine(v1.contig, v1.pos, v2.contig, v2.pos, externalFractions)

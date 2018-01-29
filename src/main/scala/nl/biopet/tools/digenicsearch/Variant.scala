@@ -38,7 +38,7 @@ case class Variant(
     val pedigreeFractions = getPedigreeFractions(broadcasts)
       .map {
         case (k, v) =>
-          val allele = if (k.isEmpty) "." else k.mkString("/")
+          val allele = if (k.isEmpty) "v" else k.mkString("/")
           s"$allele=(a=${v.affected};u=${v.unaffected})"
       }
       .mkString(",")
@@ -48,7 +48,7 @@ case class Variant(
           broadcasts.externalFilesKeys(idx) + map
             .map {
               case (k, v) =>
-                (if (k.isEmpty) "."
+                (if (k.isEmpty) "v"
                  else k.mkString("/")) + "=" + v.getOrElse("0.0")
             }
             .mkString("(", ",", ")")

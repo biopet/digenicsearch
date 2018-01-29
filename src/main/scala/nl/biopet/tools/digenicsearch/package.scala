@@ -55,7 +55,7 @@ package object digenicsearch {
   case class AlleleCombination(a1: List[Short], a2: List[Short]) {
     override def toString: String = {
       def alleleToString(a: List[Short]) =
-        if (a.nonEmpty) a.mkString("/") else "."
+        if (a.nonEmpty) a.mkString("/") else "v"
       s"(${alleleToString(a1)},${alleleToString(a2)})"
     }
   }
