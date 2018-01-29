@@ -103,10 +103,17 @@ class LoadRegion(inputReaders: List[VCFFileReader],
           if (it.hasNext && it.head.getStart == position) {
             val record = it.next()
             if (record.getReference == refAlleles.head)
-              (for (g <- record.getGenotypes.filter(_.isCalled)) yield {
+              (for (g <- record.getGenotypes) yield {
                 Genotype(
                   g.getAlleles
-                    .map(a => allAllelesString.indexOf(a.toString).toShort)
+                    .map { a =>
+                      if (a.isNoCall) (-1).toShort
+                      else {
+                        val i = allAllelesString.indexOf(a.toString).toShort
+                        if (i == -1) Short.MaxValue
+                        else i
+                      }
+                    }
                     .toList
                     .sorted)
               }).toList
