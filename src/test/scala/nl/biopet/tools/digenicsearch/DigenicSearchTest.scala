@@ -145,7 +145,7 @@ class DigenicSearchTest extends ToolTest[Args] {
   }
 
   @Test
-  def testExternalFilter(): Unit = {
+  def testSingleExternalFilter(): Unit = {
     val outputDir = Files.createTempDir()
     DigenicSearch.main(defaultWgs2Arg(outputDir) ++ Array(
       "--externalFile", "KEY=" + resourcePath("/wgsBoth.vcf.gz"),
@@ -158,6 +158,25 @@ class DigenicSearchTest extends ToolTest[Args] {
     DigenicSearch.main(defaultWgs2Arg(outputDir2) ++ Array(
       "--externalFile", "KEY=" + resourcePath("/wgsBoth.vcf.gz"),
       "--singleExternalFilter", "KEY<=0.4"))
+
+    val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
+    stats2("total_pairs") shouldBe 0
+  }
+
+  @Test
+  def testPairExternalFilter(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(defaultWgs2Arg(outputDir) ++ Array(
+      "--externalFile", "KEY=" + resourcePath("/wgsBoth.vcf.gz"),
+      "--pairExternalFilter", "KEY<=0.6"))
+
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 10
+
+    val outputDir2 = Files.createTempDir()
+    DigenicSearch.main(defaultWgs2Arg(outputDir2) ++ Array(
+      "--externalFile", "KEY=" + resourcePath("/wgsBoth.vcf.gz"),
+      "--pairExternalFilter", "KEY<=0.4"))
 
     val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
     stats2("total_pairs") shouldBe 0
