@@ -98,7 +98,7 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[Int]("maxContigsInSingleJob").unbounded().action { (x, c) =>
     c.copy(maxContigsInSingleJob = x)
   } text s"Max number of bins to be combined, default is 250"
-  opt[(String, File)]("externalFile") action {
+  opt[(String, File)]("externalFile").unbounded().action{
     case ((key, value), c) =>
       if (c.externalFiles.contains(key))
         throw new IllegalArgumentException(s"Key '$key' already exist")
