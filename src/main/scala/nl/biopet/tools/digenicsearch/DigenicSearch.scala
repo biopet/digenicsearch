@@ -61,7 +61,7 @@ object DigenicSearch extends ToolCommand[Args] {
         case (list, idx) => idx -> list
       }, broadcasts.value.regions.length)
 
-    val bla1 = variantsDataSet(regionsRdd, broadcasts).sort("contig", "pos").cache()
+    val bla1 = variantsDataSet(regionsRdd, broadcasts).cache()
     val bla12 = bla1
       .filter(x => singleAnnotationFilter(x, broadcasts.value))
       .flatMap(x => x.filterSingleFraction(broadcasts.value))
