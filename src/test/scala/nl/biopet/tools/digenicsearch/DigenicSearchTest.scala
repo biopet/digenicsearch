@@ -181,4 +181,14 @@ class DigenicSearchTest extends ToolTest[Args] {
     val stats2 = yamlFileToMap(new File(outputDir2, "stats.yml"))
     stats2("total_pairs") shouldBe 0
   }
+
+  @Test
+  def testAggregation(): Unit = {
+    val outputDir = Files.createTempDir()
+    DigenicSearch.main(defaultWgs2Arg(outputDir) ++ Array("--aggregation", resourcePath("/genes.bed")))
+
+    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+    stats("total_pairs") shouldBe 10
+  }
+
 }

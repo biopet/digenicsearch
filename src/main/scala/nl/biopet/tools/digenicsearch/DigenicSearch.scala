@@ -63,6 +63,30 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val variants: Dataset[IndexedVariantsList] =
       variantsRdd(regionsRdd, broadcasts).toDS().cache()
+
+    cmdArgs.aggregation.foreach { file =>
+      val bedRecordList = BedRecordList.fromFile(file)
+      val bedrecords = sc
+        .parallelize(
+          bedRecordList.allRecords
+            .map(r => Region(r.chr, r.start, r.end, r.name.getOrElse("")))
+            .toList)
+        .toDS()
+
+      val bla = bedrecords.columns
+
+      val v: Dataset[Variant] = variants.flatMap(_.variants)
+      val j = bedrecords
+        .joinWith(
+          v,
+          bedrecords("contig") === v("contig") && bedrecords("start") <= v(
+            "pos") && bedrecords("end") >= v("pos"))
+        .groupBy("_1.name")
+
+      val outputFile = new File(cmdArgs.outputDir, "aggregation")
+      j.count().write.csv(outputFile.getAbsolutePath)
+    }
+
     variants
       .flatMap(_.variants.map(_.toCsv(broadcasts.value)))
       .write
