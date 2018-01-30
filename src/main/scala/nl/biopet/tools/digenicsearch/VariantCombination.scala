@@ -122,17 +122,27 @@ case class VariantCombination(v1: Variant,
     }
   }
 
-  def toResultLine(externalKeys: Array[String]): ResultLineCsv = {
-
+  def toResultLine(broadcasts: Broadcasts): ResultLineCsv = {
+    val fractions = pedigreeFractions(broadcasts)
+      .map {
+        case (c, f) =>
+          s"$c:a=${f.affected},u=${f.unaffected}"
+      }
+      .mkString(";")
     val externalFractions: String = v1.externalDetectionResult.indices
       .map(
         idx =>
-          externalKeys(idx) + ":" + this
+          broadcasts.externalFilesKeys(idx) + ":" + this
             .externalFractions(idx)
             .zipWithIndex
             .map { case ((c, f), _) => c.toString + s"=${f.getOrElse(0.0)}" }
             .mkString("(", ";", ")"))
       .mkString(";")
-    ResultLineCsv(v1.contig, v1.pos, v2.contig, v2.pos, "", externalFractions)
+    ResultLineCsv(v1.contig,
+                  v1.pos,
+                  v2.contig,
+                  v2.pos,
+                  fractions,
+                  externalFractions)
   }
 }

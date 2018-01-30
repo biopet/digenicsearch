@@ -78,7 +78,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val combinationFilter =
       filterVariantCombinations(variantCombinations, broadcasts)
         .map(_.cleanResults)
-        .map(_.toResultLine(broadcasts.value.externalFilesKeys))
+        .map(_.toResultLine(broadcasts.value))
         //.repartition(500)
         //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
