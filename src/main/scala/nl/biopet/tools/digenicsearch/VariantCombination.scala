@@ -54,22 +54,31 @@ case class VariantCombination(v1: Variant,
     this.copy(v1 = newV1, v2 = newV2, alleles = keep)
   }
 
-  def filterPairFraction(
-      pedigree: PedigreeFileArray,
-      cutoffs: FractionsCutoffs): Option[VariantCombination] = {
-
+  def pedigreeFractions(
+      broadcasts: Broadcasts): Map[AlleleCombination, PedigreeFraction] = {
     val alleles1 = v1.detectionResult.result.toMap
     val alleles2 = v2.detectionResult.result.toMap
 
-    val newAlleles = alleles.filter { alleles =>
-      val combined = alleles1(alleles.a1).zip(alleles2(alleles.a2)).map {
+    alleles.map { c =>
+      val combined = alleles1(c.a1).zip(alleles2(c.a2)).map {
         case (c1, c2) => c1 && c2
       }
-      val affectedGenotypes = pedigree.affectedArray.map(combined)
-      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
+      val affectedGenotypes = broadcasts.pedigree.affectedArray.map(combined)
+      val unaffectedGenotypes =
+        broadcasts.pedigree.unaffectedArray.map(combined)
 
-      Variant.unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
-      Variant.affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction
+      c -> PedigreeFraction(Variant.affectedFraction(affectedGenotypes),
+                            Variant.unaffectedFraction(unaffectedGenotypes))
+    }.toMap
+  }
+
+  def filterPairFraction(broadcasts: Broadcasts): Option[VariantCombination] = {
+
+    val fractions = pedigreeFractions(broadcasts)
+
+    val newAlleles = alleles.filter { alleles =>
+      fractions(alleles).unaffected <= broadcasts.fractionsCutoffs.pairUnaffectedFraction &&
+      fractions(alleles).affected >= broadcasts.fractionsCutoffs.pairAffectedFraction
     }
 
     if (newAlleles.nonEmpty) Some(this.copy(alleles = newAlleles))
@@ -113,7 +122,8 @@ case class VariantCombination(v1: Variant,
     }
   }
 
-  def toResultLine(externalKeys: Array[String]): ResultLine = {
+  def toResultLine(externalKeys: Array[String]): ResultLineCsv = {
+
     val externalFractions: String = v1.externalDetectionResult.indices
       .map(
         idx =>
@@ -123,6 +133,6 @@ case class VariantCombination(v1: Variant,
             .map { case ((c, f), _) => c.toString + s"=${f.getOrElse(0.0)}" }
             .mkString("(", ";", ")"))
       .mkString(";")
-    ResultLine(v1.contig, v1.pos, v2.contig, v2.pos, externalFractions)
+    ResultLineCsv(v1.contig, v1.pos, v2.contig, v2.pos, "", externalFractions)
   }
 }

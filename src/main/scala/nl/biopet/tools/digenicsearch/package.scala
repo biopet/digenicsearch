@@ -66,10 +66,11 @@ package object digenicsearch {
                         pedigreeFractions: String,
                         externalFractions: String)
 
-  case class ResultLine(contig1: String,
-                        pos1: Int,
-                        contig2: String,
-                        pos2: Int,
-                        externalFractions: String)
+  case class ResultLineCsv(contig1: String,
+                           pos1: Int,
+                           contig2: String,
+                           pos2: Int,
+                           affectedFractions: String,
+                           externalFractions: String)
 
 }

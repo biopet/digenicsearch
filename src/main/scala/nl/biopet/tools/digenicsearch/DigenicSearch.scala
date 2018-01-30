@@ -157,8 +157,7 @@ object DigenicSearch extends ToolCommand[Args] {
 
     combinations
       .filter(pairedFilter(_, broadcasts.value.pairFilters))
-      .flatMap(_.filterPairFraction(broadcasts.value.pedigree,
-                                    broadcasts.value.fractionsCutoffs))
+      .flatMap(_.filterPairFraction(broadcasts.value))
       .flatMap(_.filterExternalPair(broadcasts.value))
   }
 
