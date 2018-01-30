@@ -62,8 +62,12 @@ object DigenicSearch extends ToolCommand[Args] {
       }, broadcasts.value.regions.length)
 
     val bla1 = variantsDataSet(regionsRdd, broadcasts).cache()
+    val bla12 = bla1
+      .filter(x => singleAnnotationFilter(x.variant, broadcasts.value))
+      .flatMap(x => x.variant.filterSingleFraction(broadcasts.value).map(v => IndexedVariant(x.idx, v)))
+      .flatMap(x => x.variant.filterExternalFractions(broadcasts.value).map(v => IndexedVariant(x.idx, v)))
     val bla2 = createCombinations(regionsRdd, broadcasts).toDS()
-    val bla3 = createVariantCombinations2(bla1, bla2, broadcasts)
+    val bla3 = createVariantCombinations2(bla12, bla2, broadcasts)
 
     val bla4 = bla3.count()
     val bla5 = bla1.count()
