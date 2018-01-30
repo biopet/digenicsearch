@@ -73,8 +73,6 @@ object DigenicSearch extends ToolCommand[Args] {
             .toList)
         .toDS()
 
-      val bla = bedrecords.columns
-
       val v: Dataset[Variant] = variants.flatMap(_.variants)
       val j = bedrecords
         .joinWith(
