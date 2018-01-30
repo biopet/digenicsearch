@@ -23,6 +23,7 @@ package nl.biopet.tools.digenicsearch
 
 import htsjdk.variant.variantcontext.VariantContext
 import htsjdk.variant.vcf.VCFFileReader
+import nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult
 import nl.biopet.utils.ngs.intervals.BedRecord
 import nl.biopet.utils.ngs.vcf
 
@@ -32,16 +33,24 @@ import scala.collection.JavaConversions._
   * This method will return a iterator of [[Variant]]
   *
   * @param inputReaders Vcf input readers
+  * @param externalInputReaders Vcf input readers
   * @param region Single regions to load
   * @param broadcasts Broadcast values
   * @return
   */
 class LoadRegion(inputReaders: List[VCFFileReader],
+                 externalInputReaders: Array[VCFFileReader],
                  region: Region,
                  broadcasts: Broadcasts)
     extends Iterator[Variant] {
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
+      .map(
+        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+      .map(_.buffered)
+
+  protected val externalIterators: Array[BufferedIterator[VariantContext]] =
+    externalInputReaders
       .map(
         vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
       .map(_.buffered)
@@ -82,10 +91,48 @@ class LoadRegion(inputReaders: List[VCFFileReader],
           throw new IllegalStateException(
             s"Sample '$sampleId' not found in $records")
       }
-      (Genotype(alleles.toList),
+      (Genotype(alleles.toList.sorted),
        GenotypeAnnotation(genotype.getDP, genotype.getDP))
     }
     val genotypes1 = genotypes.map { case (g, _) => g }.toList
+
+    val externalGenotypes: Array[List[Genotype]] = externalIterators.map {
+      it =>
+        if (it.hasNext) {
+          while (it.hasNext && it.head.getStart < position) it.next()
+          if (it.hasNext && it.head.getStart == position) {
+            val record = it.next()
+            if (record.getReference == refAlleles.head)
+              (for (g <- record.getGenotypes) yield {
+                Genotype(
+                  g.getAlleles
+                    .map { a =>
+                      if (a.isNoCall) (-1).toShort
+                      else {
+                        val i = allAllelesString.indexOf(a.toString).toShort
+                        if (i == -1) Short.MaxValue
+                        else i
+                      }
+                    }
+                    .toList
+                    .sorted)
+              }).toList
+            else Nil
+          } else Nil
+        } else Nil
+    }
+
+    val detectionResult =
+      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1)
+
+    val externalDetetcionResults = externalGenotypes.map { g =>
+      val result = DetectionMode.valueToVal(broadcasts.detectionMode).method(g)
+      DetectionResult(result.result.filter {
+        case (allele, _) =>
+          detectionResult.result.exists { case (a2, _) => allele == a2 }
+      })
+    }
+
     Variant(
       region.contig,
       position,
@@ -93,7 +140,9 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       genotypes1,
       annotations.toList,
       genotypes.map { case (_, g) => g }.toList,
-      DetectionMode.valueToVal(broadcasts.detectionMode).method(genotypes1)
+      detectionResult,
+      externalGenotypes,
+      externalDetetcionResults
     )
   }
 }

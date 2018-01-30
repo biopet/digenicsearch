@@ -63,6 +63,10 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val variants: Dataset[IndexedVariantsList] =
       variantsRdd(regionsRdd, broadcasts).toDS().cache()
+    variants
+      .flatMap(_.variants.map(_.toCsv(broadcasts.value)))
+      .write
+      .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
 
     val singleFilterTotal = countSingleFilterTotal(variants)
 
@@ -71,26 +75,32 @@ object DigenicSearch extends ToolCommand[Args] {
 
     val variantCombinations =
       createVariantCombinations(variants, indexCombination, broadcasts)
-      //.repartition(500)
-      //.sort("contig1", "contig2", "pos1", "pos2")
+    val combinationFilter =
+      filterVariantCombinations(variantCombinations, broadcasts)
+        .map(_.cleanResults)
+        .map(_.toResultLine(broadcasts.value))
+        //.repartition(500)
+        //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
 
-    variantCombinations.write.parquet(
-      outputFile(cmdArgs.outputDir).getAbsolutePath)
+    combinationFilter.write.csv(outputPairs(cmdArgs.outputDir).getAbsolutePath)
 
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
-                   variantCombinations.count())
+                   combinationFilter.count())
 
     sc.stop()
     logger.info("Done")
   }
 
-  def outputFile(outputDir: File): File = new File(outputDir, "pairs")
+  def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
+  def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
   def checkExistsOutput(outputDir: File): Unit = {
-    require(!outputFile(outputDir).exists(),
-            s"Output file already exists: ${outputFile(outputDir)}")
+    require(!outputPairs(outputDir).exists(),
+            s"Output file already exists: ${outputPairs(outputDir)}")
+    require(!outputVariants(outputDir).exists(),
+            s"Output file already exists: ${outputVariants(outputDir)}")
   }
 
   def writeStatsFile(outputDir: File,
@@ -119,43 +129,36 @@ object DigenicSearch extends ToolCommand[Args] {
   def createVariantCombinations(variants: Dataset[IndexedVariantsList],
                                 indexCombination: Dataset[Combination],
                                 broadcasts: Broadcast[Broadcasts])(
-      implicit sparkSession: SparkSession): Dataset[ResultLine] = {
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
     val singleCombination = indexCombination
       .joinWith(variants, indexCombination("i1") === variants("idx"))
       .map { case (c, v) => CombinationSingle(v, c.i2) }
-    val combinations: Dataset[CombinationVariantList] = singleCombination
+    val combinationLists: Dataset[CombinationVariantList] = singleCombination
       .joinWith(variants, singleCombination("i2") === variants("idx"))
       .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
+    combinationLists.flatMap { x =>
+      val same = x.i1.idx == x.i2.idx
+      for {
+        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
+        (v2, id2) <- x.i2.variants.zipWithIndex
+        if (!same || id1 < id2) &&
+          distanceFilter(v1, v2, broadcasts.value.maxDistance)
+      } yield
+        VariantCombination(v1, v2, Variant.alleleCombinations(v1, v2).toList)
+    }
+  }
+
+  def filterVariantCombinations(combinations: Dataset[VariantCombination],
+                                broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+    import sparkSession.implicits._
+
     combinations
-      .flatMap { x =>
-        val same = x.i1.idx == x.i2.idx
-        (for {
-          (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-          (v2, id2) <- x.i2.variants.zipWithIndex
-          if (!same || id1 < id2) && distanceFilter(
-            v1,
-            v2,
-            broadcasts.value.maxDistance) &&
-            pairedFilter(v1, v2, broadcasts.value.pairFilters) &&
-            Variant
-              .filterPairFraction(v1,
-                                  v2,
-                                  broadcasts.value.pedigree,
-                                  broadcasts.value.fractionsCutoffs)
-              .isDefined
-        } yield {
-          Variant
-            .filterPairFraction(v1,
-                                v2,
-                                broadcasts.value.pedigree,
-                                broadcasts.value.fractionsCutoffs)
-            .map {
-              case (c1, c2) => ResultLine(c1.contig, c1.pos, c2.contig, c2.pos)
-            }
-        }).flatten
-      }
+      .filter(pairedFilter(_, broadcasts.value.pairFilters))
+      .flatMap(_.filterPairFraction(broadcasts.value))
+      .flatMap(_.filterExternalPair(broadcasts.value))
   }
 
   def variantsRdd(
@@ -167,22 +170,25 @@ object DigenicSearch extends ToolCommand[Args] {
           loadRegions(idx, r, broadcasts.value)
       }
       .map { v =>
-        v.copy(
-          variants =
-            v.variants.filter(singleAnnotationFilter(_, broadcasts.value)))
+        v.copy(variants =
+          v.variants.filter(singleAnnotationFilter(_, broadcasts.value)))
       }
       .map { v =>
         v.copy(
           variants =
             v.variants.flatMap(_.filterSingleFraction(broadcasts.value)))
       }
+      .map { v =>
+        v.copy(
+          variants =
+            v.variants.flatMap(_.filterExternalFractions(broadcasts.value)))
+      }
   }
 
   /** This filters if 1 of the 2 variants returns true */
-  def pairedFilter(v1: Variant,
-                   v2: Variant,
+  def pairedFilter(combination: VariantCombination,
                    pairFilters: List[AnnotationFilter]): Boolean = {
-    val list = List(v1, v2)
+    val list = List(combination.v1, combination.v2)
     pairFilters.isEmpty ||
     pairFilters.forall { c =>
       list.exists(
@@ -260,9 +266,10 @@ object DigenicSearch extends ToolCommand[Args] {
                   regions: List[Region],
                   broadcasts: Broadcasts): IndexedVariantsList = {
     val readers = broadcasts.inputFiles.map(new VCFFileReader(_))
+    val externalReaders = broadcasts.externalFiles.map(new VCFFileReader(_))
     IndexedVariantsList(
       idx,
-      regions.flatMap(new LoadRegion(readers, _, broadcasts)))
+      regions.flatMap(new LoadRegion(readers, externalReaders, _, broadcasts)))
   }
 
   /** creates regions to analyse */

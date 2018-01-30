@@ -35,7 +35,11 @@ case class Broadcasts(samples: Array[String],
                       inputFiles: List[File],
                       fractionsCutoffs: FractionsCutoffs,
                       detectionMode: DetectionMode.Value,
-                      regions: Array[List[Region]])
+                      regions: Array[List[Region]],
+                      externalFiles: Array[File],
+                      externalFilesKeys: Array[String],
+                      singleExternalFilters: Array[List[ExternalFilter]],
+                      pairExternalFilters: Array[List[ExternalFilter]])
 
 object Broadcasts {
   def fromArgs(cmdArgs: Args): Broadcasts = {
@@ -55,6 +59,37 @@ object Broadcasts {
       .map(_.key)
       .toSet ++ cmdArgs.pairAnnotationFilter.map(_.key).toSet
 
+    (cmdArgs.singleExternalFilters.map(_.key) ++ cmdArgs.pairExternalFilters
+      .map(_.key))
+      .foreach(
+        k =>
+          require(cmdArgs.externalFiles.contains(k),
+                  s"External file with key '$k' not found"))
+
+    val externalFilesKeys = cmdArgs.externalFiles.toArray
+    val externalFiles = externalFilesKeys.map { case (key, file) => file }
+    require(externalFilesKeys.length == externalFiles.length,
+            "Duplicate external file found")
+
+    val singleExternalFilters = externalFilesKeys.zipWithIndex.map {
+      case ((key, file), idx) =>
+        cmdArgs.singleExternalFilters
+          .filter(_.key == key)
+          .map(f => ExternalFilter(key, idx, f.method))
+    }
+    val pairExternalFilters = externalFilesKeys.zipWithIndex.map {
+      case ((key, file), idx) =>
+        cmdArgs.pairExternalFilters
+          .filter(_.key == key)
+          .map(f => ExternalFilter(key, idx, f.method))
+    }
+    singleExternalFilters.zip(pairExternalFilters).zipWithIndex.foreach {
+      case ((single, pair), idx) =>
+        require(
+          single.nonEmpty || pair.nonEmpty,
+          s"External file is not used in a filter: ${externalFiles(idx)}")
+    }
+
     Broadcasts(
       samples,
       pedigree,
@@ -65,7 +100,11 @@ object Broadcasts {
       cmdArgs.inputFiles,
       cmdArgs.fractions,
       cmdArgs.detectionMode,
-      generateRegions(cmdArgs).toArray
+      generateRegions(cmdArgs).toArray,
+      externalFiles,
+      externalFilesKeys.map { case (key, _) => key },
+      singleExternalFilters,
+      pairExternalFilters
     )
   }
 }

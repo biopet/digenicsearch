@@ -23,19 +23,49 @@ package nl.biopet.tools.digenicsearch
 
 import nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult
 
-case class Variant(contig: String,
-                   pos: Int,
-                   alleles: List[String],
-                   genotypes: List[Genotype],
-                   annotations: List[AnnotationValue] = List(),
-                   genotypeAnnotation: List[GenotypeAnnotation],
-                   detectionResult: DetectionMode.DetectionResult) {
+case class Variant(
+    contig: String,
+    pos: Int,
+    alleles: List[String],
+    genotypes: List[Genotype],
+    annotations: List[AnnotationValue] = List(),
+    genotypeAnnotation: List[GenotypeAnnotation],
+    detectionResult: DetectionMode.DetectionResult,
+    externalGenotypes: Array[List[Genotype]],
+    externalDetectionResult: Array[DetectionMode.DetectionResult]) {
 
-  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
+  def toCsv(broadcasts: Broadcasts): VariantCsv = {
+    val pedigreeFractions = getPedigreeFractions(broadcasts)
+      .map {
+        case (k, v) =>
+          val allele = if (k.isEmpty) "v" else k.mkString("/")
+          s"$allele=(a=${v.affected};u=${v.unaffected})"
+      }
+      .mkString(",")
+    val externalFractions = getExternalFractions.zipWithIndex
+      .map {
+        case (map, idx) =>
+          broadcasts.externalFilesKeys(idx) + map
+            .map {
+              case (k, v) =>
+                (if (k.isEmpty) "v"
+                 else k.mkString("/")) + "=" + v.getOrElse("0.0")
+            }
+            .mkString("(", ",", ")")
+      }
+      .mkString(";")
+    VariantCsv(contig,
+               pos,
+               alleles.mkString(","),
+               pedigreeFractions,
+               externalFractions)
+  }
 
+  def getPedigreeFractions(
+      broadcasts: Broadcasts): Map[List[Short], PedigreeFraction] = {
     val alleles = detectionResult.result.toMap
 
-    val result = for ((allele, result) <- alleles) yield {
+    for ((allele, result) <- alleles) yield {
       val affectedGenotypes = broadcasts.pedigree.affectedArray.map(result)
       val unaffectedGenotypes = broadcasts.pedigree.unaffectedArray.map(result)
 
@@ -43,28 +73,72 @@ case class Variant(contig: String,
         Variant.affectedFraction(affectedGenotypes),
         Variant.unaffectedFraction(unaffectedGenotypes))
     }
+  }
 
-    val filter = result
+  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
+
+    val alleles = detectionResult.result.toMap
+
+    val result = this.getPedigreeFractions(broadcasts)
+
+    val teRemove = result
       .filter {
         case (_, f) =>
-          f.unaffected <= broadcasts.fractionsCutoffs.singleUnaffectedFraction
+          !(f.unaffected <= broadcasts.fractionsCutoffs.singleUnaffectedFraction) || !(f.affected >= broadcasts.fractionsCutoffs.singleAffectedFraction)
       }
-      .filter {
-        case (_, f) =>
-          f.affected >= broadcasts.fractionsCutoffs.singleAffectedFraction
-      }
+      .map { case (a, _) => a }
+      .toSet
 
-    if (filter.nonEmpty) {
-      Some(
-        this.copy(detectionResult =
-          DetectionResult(filter.keys.map(k => k -> alleles(k)).toList)))
-    } else None
+    removeAlleles(teRemove)
+  }
+
+  def getExternalFractions: Array[Map[List[Short], Option[Double]]] = {
+    externalDetectionResult.map { d =>
+      d.result.toMap.map {
+        case (k, v) =>
+          if (v.isEmpty) k -> None
+          else k -> Some(v.count(_ == true).toDouble / v.length)
+      }
+    }
+  }
+
+  def filterExternalFractions(broadcasts: Broadcasts): Option[Variant] = {
+
+    val fractions = getExternalFractions
+
+    val toRemove = (for {
+      (dr, filters) <- fractions.zip(broadcasts.singleExternalFilters)
+      (allele, fraction) <- dr
+    } yield {
+      fraction match {
+        case Some(f) =>
+          if (filters.forall { filter =>
+                filter.method(f)
+              }) None
+          else Some(allele)
+        case _ => None
+      }
+    }).flatten.toSet
+    removeAlleles(toRemove)
+  }
+
+  private def removeAlleles(removeAlleles: Set[List[Short]]): Option[Variant] = {
+    val dr = DetectionResult(this.detectionResult.result.filter {
+      case (allele, _) => !removeAlleles.contains(allele)
+    })
+    val edr = externalDetectionResult.map(x =>
+      DetectionResult(x.result.filter {
+        case (allele, _) => !removeAlleles.contains(allele)
+      }))
+    if (dr.result.nonEmpty)
+      Some(this.copy(detectionResult = dr, externalDetectionResult = edr))
+    else None
   }
 }
 
 object Variant {
 
-  private def unaffectedFraction(unaffectedGenotypes: Array[Boolean]) = {
+  def unaffectedFraction(unaffectedGenotypes: Array[Boolean]): Double = {
     if (unaffectedGenotypes.nonEmpty) {
       unaffectedGenotypes
         .count(_ == true)
@@ -72,41 +146,18 @@ object Variant {
     } else 0.0
   }
 
-  private def affectedFraction(affectedGenotypes: Array[Boolean]) = {
+  def affectedFraction(affectedGenotypes: Array[Boolean]): Double = {
     affectedGenotypes
       .count(_ == true)
       .toDouble / affectedGenotypes.length
   }
 
-  def filterPairFraction(
-      v1: Variant,
-      v2: Variant,
-      pedigree: PedigreeFileArray,
-      cutoffs: FractionsCutoffs): Option[(Variant, Variant)] = {
-    val alleles1 = v1.detectionResult.result.toMap
-    val alleles2 = v2.detectionResult.result.toMap
-
-    val alleles = (for ((a1, s1) <- alleles1; (a2, s2) <- alleles2) yield {
-      val combined = s1.zip(s2).map { case (c1, c2) => c1 && c2 }
-      val affectedGenotypes = pedigree.affectedArray.map(combined)
-      val unaffectedGenotypes = pedigree.unaffectedArray.map(combined)
-
-      if (unaffectedFraction(unaffectedGenotypes) <= cutoffs.pairUnaffectedFraction &&
-          affectedFraction(affectedGenotypes) >= cutoffs.pairAffectedFraction) {
-        Option((a1, a2))
-      } else None
-    }).flatten
-
-    if (alleles.nonEmpty) {
-      val a1 = alleles.map { case (a, _) => a }.toList.toSet
-      val a2 = alleles.map { case (_, a) => a }.toList.toSet
-      val d1 = DetectionResult(v1.detectionResult.result.filter {
-        case (a, _) => a1.contains(a)
-      })
-      val d2 = DetectionResult(v2.detectionResult.result.filter {
-        case (a, _) => a2.contains(a)
-      })
-      Option((v1.copy(detectionResult = d1), v2.copy(detectionResult = d2)))
-    } else None
+  def alleleCombinations(v1: Variant,
+                         v2: Variant): Iterator[AlleleCombination] = {
+    v1.detectionResult.result.map { case (allele, _) => allele }
+    for {
+      (a1, _) <- v1.detectionResult.result.iterator
+      (a2, _) <- v2.detectionResult.result
+    } yield AlleleCombination(a1, a2)
   }
 }
