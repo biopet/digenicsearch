@@ -32,7 +32,8 @@ case class Variant(
     genotypeAnnotation: List[GenotypeAnnotation],
     detectionResult: DetectionMode.DetectionResult,
     externalGenotypes: Array[List[Genotype]],
-    externalDetectionResult: Array[DetectionMode.DetectionResult]) {
+    externalDetectionResult: Array[DetectionMode.DetectionResult],
+    regionsIdx: Int) {
 
   def toCsv(broadcasts: Broadcasts): VariantCsv = {
     val pedigreeFractions = getPedigreeFractions(broadcasts)
