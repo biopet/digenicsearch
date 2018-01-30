@@ -38,11 +38,6 @@ package object digenicsearch {
   case class AnnotationValue(key: String, value: List[Double])
 
   case class Combination(i1: Int, i2: Int)
-  case class CombinationSingle(i1: IndexedVariantsList, i2: Int)
-  case class CombinationVariantList(i1: IndexedVariantsList,
-                                    i2: IndexedVariantsList)
-  case class IndexedVariantsList(idx: Int, variants: List[Variant])
-  case class IndexedVariant(idx: Int, variant: Variant)
   case class IndexedRegions(idx: Int, regions: List[Region])
 
   case class Genotype(alleles: List[Short]) {
