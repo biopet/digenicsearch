@@ -43,6 +43,7 @@ package object digenicsearch {
                                     i2: IndexedVariantsList)
   case class IndexedVariantsList(idx: Int, variants: List[Variant])
   case class IndexedVariant(idx: Int, variant: Variant)
+  case class IndexedRegions(idx: Int, regions: List[Region])
 
   case class Genotype(alleles: List[Short]) {
     def isReference: Boolean = alleles.forall(_ == 0)
