@@ -61,6 +61,16 @@ object DigenicSearch extends ToolCommand[Args] {
         case (list, idx) => idx -> list
       }, broadcasts.value.regions.length)
 
+    val bla1 = variantsDataSet(regionsRdd, broadcasts).cache()
+    val bla2 = createCombinations(regionsRdd, broadcasts).toDS()
+    val bla3 = createVariantCombinations2(bla1, bla2, broadcasts)
+
+    val bla4 = bla3.count()
+    val bla5 = bla1.count()
+
+    println(bla5)
+    println(bla4)
+
     val variants: Dataset[IndexedVariantsList] =
       variantsRdd(regionsRdd, broadcasts).toDS().cache()
 
@@ -172,6 +182,26 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
+  case class Temp(v1: Variant, i2: Int)
+  def createVariantCombinations2(variants: Dataset[IndexedVariant],
+                                indexCombination: Dataset[Combination],
+                                broadcasts: Broadcast[Broadcasts])(
+                                 implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+    import sparkSession.implicits._
+
+
+    val single = indexCombination.joinWith(variants, variants("idx") === indexCombination("i1")).map { case (c, v1) =>
+      Temp(v1.variant, c.i2)
+    }
+    single.joinWith(variants, variants("idx") === single("i2")).flatMap { case (t, v2i) =>
+      val v1 = t.v1
+      val v2 = v2i.variant
+      if (v1.contig > v2.contig || v1.pos < v2.pos)
+        Some(VariantCombination(v1, v2, Variant.alleleCombinations(v1, v2).toList))
+      else None
+    }
+  }
+
   def filterVariantCombinations(combinations: Dataset[VariantCombination],
                                 broadcasts: Broadcast[Broadcasts])(
       implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
@@ -181,6 +211,19 @@ object DigenicSearch extends ToolCommand[Args] {
       .filter(pairedFilter(_, broadcasts.value.pairFilters))
       .flatMap(_.filterPairFraction(broadcasts.value))
       .flatMap(_.filterExternalPair(broadcasts.value))
+  }
+
+  def variantsDataSet(regionsRdd: RDD[(Int, List[Region])],
+                      broadcasts: Broadcast[Broadcasts])(implicit sparkSession: SparkSession): Dataset[IndexedVariant] = {
+    import sparkSession.implicits._
+    regionsRdd.toDS()
+      .mapPartitions { it =>
+        val readers = broadcasts.value.inputFiles.map(new VCFFileReader(_))
+        val externalReaders = broadcasts.value.externalFiles.map(new VCFFileReader(_))
+        it.flatMap { case (idx, regions) =>
+          regions.flatMap(new LoadRegion(readers, externalReaders, _, broadcasts.value)).map(v => IndexedVariant(idx, v))
+        }
+      }
   }
 
   def variantsRdd(

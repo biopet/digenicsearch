@@ -134,7 +134,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
     }
 
     Variant(
-      region.contig,
+      broadcasts.dict.getSequenceIndex(region.contig),
       position,
       allAllelesString.toList,
       genotypes1,

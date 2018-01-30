@@ -24,7 +24,7 @@ package nl.biopet.tools.digenicsearch
 import nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult
 
 case class Variant(
-    contig: String,
+    contig: Int,
     pos: Int,
     alleles: List[String],
     genotypes: List[Genotype],
@@ -54,7 +54,7 @@ case class Variant(
             .mkString("(", ",", ")")
       }
       .mkString(";")
-    VariantCsv(contig,
+    VariantCsv(broadcasts.dict.getSequence(contig).getSequenceName,
                pos,
                alleles.mkString(","),
                pedigreeFractions,

@@ -23,10 +23,13 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.File
 
+import htsjdk.samtools.SAMSequenceDictionary
 import nl.biopet.tools.digenicsearch.DigenicSearch.generateRegions
 import nl.biopet.utils.ngs.vcf
+import nl.biopet.utils.ngs.fasta
 
 case class Broadcasts(samples: Array[String],
+                      dict: SAMSequenceDictionary,
                       pedigree: PedigreeFileArray,
                       annotations: Set[String],
                       maxDistance: Option[Long],
@@ -92,6 +95,7 @@ object Broadcasts {
 
     Broadcasts(
       samples,
+      fasta.getCachedDict(cmdArgs.reference),
       pedigree,
       annotations,
       cmdArgs.maxDistance,

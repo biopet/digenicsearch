@@ -138,9 +138,9 @@ case class VariantCombination(v1: Variant,
             .map { case ((c, f), _) => c.toString + s"=${f.getOrElse(0.0)}" }
             .mkString("(", ";", ")"))
       .mkString(";")
-    ResultLineCsv(v1.contig,
+    ResultLineCsv(broadcasts.dict.getSequence(v1.contig).getSequenceName,
                   v1.pos,
-                  v2.contig,
+                  broadcasts.dict.getSequence(v2.contig).getSequenceName,
                   v2.pos,
                   fractions,
                   externalFractions)
