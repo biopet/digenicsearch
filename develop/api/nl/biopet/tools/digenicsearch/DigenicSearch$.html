@@ -322,18 +322,18 @@
     </span>
       <p class="shortcomment cmt">This created a list of combinations rdds</p>
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#createVariantCombinations" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="createVariantCombinations(variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.IndexedVariantsList],indexCombination:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Combination],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.ResultLine]"></a>
-      <a id="createVariantCombinations(Dataset[IndexedVariantsList],Dataset[Combination],Broadcast[Broadcasts])(SparkSession):Dataset[ResultLine]"></a>
+      <a id="createVariantCombinations(variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.IndexedVariantsList],indexCombination:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Combination],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.VariantCombination]"></a>
+      <a id="createVariantCombinations(Dataset[IndexedVariantsList],Dataset[Combination],Broadcast[Broadcasts])(SparkSession):Dataset[VariantCombination]"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">createVariantCombinations</span><span class="params">(<span name="variants">variants: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$IndexedVariantsList.html" class="extype" name="nl.biopet.tools.digenicsearch.IndexedVariantsList">IndexedVariantsList</a>]</span>, <span name="indexCombination">indexCombination: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$Combination.html" class="extype" name="nl.biopet.tools.digenicsearch.Combination">Combination</a>]</span>, <span name="broadcasts">broadcasts: <span class="extype" name="org.apache.spark.broadcast.Broadcast">Broadcast</span>[<a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$ResultLine.html" class="extype" name="nl.biopet.tools.digenicsearch.ResultLine">ResultLine</a>]</span>
+        <span class="name">createVariantCombinations</span><span class="params">(<span name="variants">variants: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$IndexedVariantsList.html" class="extype" name="nl.biopet.tools.digenicsearch.IndexedVariantsList">IndexedVariantsList</a>]</span>, <span name="indexCombination">indexCombination: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$Combination.html" class="extype" name="nl.biopet.tools.digenicsearch.Combination">Combination</a>]</span>, <span name="broadcasts">broadcasts: <span class="extype" name="org.apache.spark.broadcast.Broadcast">Broadcast</span>[<a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="VariantCombination.html" class="extype" name="nl.biopet.tools.digenicsearch.VariantCombination">VariantCombination</a>]</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@createVariantCombinations(variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.IndexedVariantsList],indexCombination:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Combination],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.ResultLine]" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@createVariantCombinations(variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.IndexedVariantsList],indexCombination:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Combination],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.VariantCombination]" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -491,6 +491,23 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="nl.biopet.tools.digenicsearch.DigenicSearch">DigenicSearch</a> → ToolCommand</dd></dl></div>
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#filterVariantCombinations" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="filterVariantCombinations(combinations:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.VariantCombination],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.VariantCombination]"></a>
+      <a id="filterVariantCombinations(Dataset[VariantCombination],Broadcast[Broadcasts])(SparkSession):Dataset[VariantCombination]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">filterVariantCombinations</span><span class="params">(<span name="combinations">combinations: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="VariantCombination.html" class="extype" name="nl.biopet.tools.digenicsearch.VariantCombination">VariantCombination</a>]</span>, <span name="broadcasts">broadcasts: <span class="extype" name="org.apache.spark.broadcast.Broadcast">Broadcast</span>[<a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="VariantCombination.html" class="extype" name="nl.biopet.tools.digenicsearch.VariantCombination">VariantCombination</a>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@filterVariantCombinations(combinations:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.VariantCombination],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.VariantCombination]" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
     </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <a id="finalize():Unit"></a>
@@ -769,36 +786,53 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#outputFile" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="outputFile(outputDir:java.io.File):java.io.File"></a>
-      <a id="outputFile(File):File"></a>
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#outputPairs" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="outputPairs(outputDir:java.io.File):java.io.File"></a>
+      <a id="outputPairs(File):File"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">outputFile</span><span class="params">(<span name="outputDir">outputDir: <span class="extype" name="java.io.File">File</span></span>)</span><span class="result">: <span class="extype" name="java.io.File">File</span></span>
+        <span class="name">outputPairs</span><span class="params">(<span name="outputDir">outputDir: <span class="extype" name="java.io.File">File</span></span>)</span><span class="result">: <span class="extype" name="java.io.File">File</span></span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@outputFile(outputDir:java.io.File):java.io.File" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@outputPairs(outputDir:java.io.File):java.io.File" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#outputVariants" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="outputVariants(outputDir:java.io.File):java.io.File"></a>
+      <a id="outputVariants(File):File"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">outputVariants</span><span class="params">(<span name="outputDir">outputDir: <span class="extype" name="java.io.File">File</span></span>)</span><span class="result">: <span class="extype" name="java.io.File">File</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@outputVariants(outputDir:java.io.File):java.io.File" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
       
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#pairedFilter" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="pairedFilter(v1:nl.biopet.tools.digenicsearch.Variant,v2:nl.biopet.tools.digenicsearch.Variant,pairFilters:List[nl.biopet.tools.digenicsearch.AnnotationFilter]):Boolean"></a>
-      <a id="pairedFilter(Variant,Variant,List[AnnotationFilter]):Boolean"></a>
+      <a id="pairedFilter(combination:nl.biopet.tools.digenicsearch.VariantCombination,pairFilters:List[nl.biopet.tools.digenicsearch.AnnotationFilter]):Boolean"></a>
+      <a id="pairedFilter(VariantCombination,List[AnnotationFilter]):Boolean"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">pairedFilter</span><span class="params">(<span name="v1">v1: <a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a></span>, <span name="v2">v2: <a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a></span>, <span name="pairFilters">pairFilters: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationFilter">AnnotationFilter</a>]</span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">pairedFilter</span><span class="params">(<span name="combination">combination: <a href="VariantCombination.html" class="extype" name="nl.biopet.tools.digenicsearch.VariantCombination">VariantCombination</a></span>, <span name="pairFilters">pairFilters: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationFilter">AnnotationFilter</a>]</span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@pairedFilter(v1:nl.biopet.tools.digenicsearch.Variant,v2:nl.biopet.tools.digenicsearch.Variant,pairFilters:List[nl.biopet.tools.digenicsearch.AnnotationFilter]):Boolean" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@pairedFilter(combination:nl.biopet.tools.digenicsearch.VariantCombination,pairFilters:List[nl.biopet.tools.digenicsearch.AnnotationFilter]):Boolean" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>

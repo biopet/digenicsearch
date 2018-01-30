@@ -182,13 +182,13 @@
             <tr>
               <td>--singleAnnotationFilter</td>
               <td>no</td>
-              <td>no</td>
+              <td>yes (unlimited)</td>
               <td>Filter on single variant</td>
             </tr>
             <tr>
               <td>--pairAnnotationFilter</td>
               <td>no</td>
-              <td>no</td>
+              <td>yes (unlimited)</td>
               <td>Filter on paired variant, must be true for 1 of the 2 in the pair</td>
             </tr>
             <tr>
@@ -230,8 +230,26 @@
             <tr>
               <td>--maxContigsInSingleJob</td>
               <td>no</td>
-              <td>no</td>
+              <td>yes (unlimited)</td>
               <td>Max number of bins to be combined, default is 250</td>
+            </tr>
+            <tr>
+              <td>--externalFile</td>
+              <td>no</td>
+              <td>yes (unlimited)</td>
+              <td>External file used for filtering</td>
+            </tr>
+            <tr>
+              <td>--singleExternalFilter</td>
+              <td>no</td>
+              <td>yes (unlimited)</td>
+              <td>Filter on paired variant, must be true for 1 of the 2 in the pair</td>
+            </tr>
+            <tr>
+              <td>--pairExternalFilter</td>
+              <td>no</td>
+              <td>yes (unlimited)</td>
+              <td>Filter on paired variant, must be true for 1 of the 2 in the pair</td>
             </tr>
             <tr>
               <td>--sparkMaster</td>
