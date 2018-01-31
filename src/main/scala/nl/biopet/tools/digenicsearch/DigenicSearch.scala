@@ -23,6 +23,7 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.File
 
+import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.variant.vcf.VCFFileReader
 import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.tool.ToolCommand
@@ -69,7 +70,7 @@ object DigenicSearch extends ToolCommand[Args] {
     val combinations =
       createVariantCombinations(variantsAllFiltered, regions, broadcasts)
 
-    val aggregateFuture = aggregate(cmdArgs, variants)
+    val aggregateFuture = aggregate(cmdArgs, variants, broadcasts.value.dict)
 
     val combinationFilter =
       filterVariantCombinations(combinations, broadcasts)
@@ -100,17 +101,15 @@ object DigenicSearch extends ToolCommand[Args] {
   def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
   def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
-  def aggregate(cmdArgs: Args, variants: Dataset[Variant])(
+  def aggregate(cmdArgs: Args,
+                variants: Dataset[Variant],
+                dict: SAMSequenceDictionary)(
       implicit sparkSession: SparkSession): Future[Unit] = {
     import sparkSession.implicits._
     Future {
       cmdArgs.aggregation.foreach { file =>
-        val bedRecordList = BedRecordList.fromFile(file)
         val bedrecords = sparkSession.sparkContext
-          .parallelize(
-            bedRecordList.allRecords
-              .map(r => Region(r.chr, r.start, r.end, r.name.getOrElse("")))
-              .toList)
+          .parallelize(Region.fromBedFile(file, dict))
           .toDS()
 
         val j =
@@ -120,10 +119,18 @@ object DigenicSearch extends ToolCommand[Args] {
               bedrecords("contig") === variants("contig") && bedrecords(
                 "start") <= variants("pos") && bedrecords("end") >= variants(
                 "pos"))
-            .groupBy("_1.name")
+            .rdd
+            .map { case (r, v) => r.name -> v }
+            .groupByKey()
+            .map { case (g, l) => GeneCounts(g, l.size) }
+            .toDS()
+
+        val bla = variants.collect()
+        val bla2 = bedrecords.collect()
+        val bla3 = j.collect()
 
         val outputFile = new File(cmdArgs.outputDir, "aggregation")
-        j.count().write.csv(outputFile.getAbsolutePath)
+        j.write.csv(outputFile.getAbsolutePath)
       }
     }
   }
@@ -278,7 +285,8 @@ object DigenicSearch extends ToolCommand[Args] {
   }
 
   /** creates regions to analyse */
-  def generateRegions(cmdArgs: Args): List[List[Region]] = {
+  def generateRegions(cmdArgs: Args,
+                      dict: SAMSequenceDictionary): List[List[Region]] = {
     val regions = (cmdArgs.regions match {
       case Some(i) =>
         BedRecordList.fromFile(i).validateContigs(cmdArgs.reference)
@@ -286,7 +294,8 @@ object DigenicSearch extends ToolCommand[Args] {
     }).combineOverlap
       .scatter(cmdArgs.binSize,
                maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
-    regions.map(x => x.map(y => Region(y.chr, y.start, y.end)))
+    regions.map(x =>
+      x.map(y => Region(dict.getSequenceIndex(y.chr), y.start, y.end)))
   }
 
   def descriptionText: String =

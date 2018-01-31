@@ -48,13 +48,21 @@ class LoadRegion(inputReaders: List[VCFFileReader],
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
       .map(
-        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+        vcf.loadRegion(
+          _,
+          BedRecord(broadcasts.dict.getSequence(region.contig).getSequenceName,
+                    region.start,
+                    region.end)))
       .map(_.buffered)
 
   protected val externalIterators: Array[BufferedIterator[VariantContext]] =
     externalInputReaders
       .map(
-        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+        vcf.loadRegion(
+          _,
+          BedRecord(broadcasts.dict.getSequence(region.contig).getSequenceName,
+                    region.start,
+                    region.end)))
       .map(_.buffered)
 
   def hasNext: Boolean = iterators.exists(_.hasNext)
@@ -136,7 +144,7 @@ class LoadRegion(inputReaders: List[VCFFileReader],
     }
 
     Variant(
-      broadcasts.dict.getSequenceIndex(region.contig),
+      region.contig,
       position,
       allAllelesString.toList,
       genotypes1,

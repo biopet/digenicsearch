@@ -92,9 +92,11 @@ object Broadcasts {
           s"External file is not used in a filter: ${externalFiles(idx)}")
     }
 
+    val dict = fasta.getCachedDict(cmdArgs.reference)
+
     Broadcasts(
       samples,
-      fasta.getCachedDict(cmdArgs.reference),
+      dict,
       pedigree,
       annotations,
       cmdArgs.maxDistance,
@@ -103,7 +105,7 @@ object Broadcasts {
       cmdArgs.inputFiles,
       cmdArgs.fractions,
       cmdArgs.detectionMode,
-      generateRegions(cmdArgs).toArray,
+      generateRegions(cmdArgs, dict).toArray,
       externalFiles,
       externalFilesKeys.map { case (key, _) => key },
       singleExternalFilters,

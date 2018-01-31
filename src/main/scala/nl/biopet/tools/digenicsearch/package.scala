@@ -22,15 +22,6 @@
 package nl.biopet.tools
 
 package object digenicsearch {
-  case class Region(contig: String, start: Int, end: Int, name: String = "") {
-    def distance(other: Region): Option[Long] = {
-      if (this.contig == other.contig) {
-        if (this.start > other.end) Some(this.start - other.end)
-        else if (other.start > this.end) Some(other.start - this.end)
-        else Some(0)
-      } else None
-    }
-  }
 
   case class AnnotationFilter(key: String, method: Double => Boolean)
   case class ExternalFilter(key: String, id: Int, method: Double => Boolean)
@@ -56,6 +47,8 @@ package object digenicsearch {
       s"(${alleleToString(a1)},${alleleToString(a2)})"
     }
   }
+
+  case class GeneCounts(gene: String, count: Long)
 
   case class VariantCsv(contig: String,
                         pos: Int,
