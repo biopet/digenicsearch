@@ -125,10 +125,6 @@ object DigenicSearch extends ToolCommand[Args] {
             .map { case (g, l) => GeneCounts(g, l.size) }
             .toDS()
 
-        val bla = variants.collect()
-        val bla2 = bedrecords.collect()
-        val bla3 = j.collect()
-
         val outputFile = new File(cmdArgs.outputDir, "aggregation")
         j.write.csv(outputFile.getAbsolutePath)
       }
