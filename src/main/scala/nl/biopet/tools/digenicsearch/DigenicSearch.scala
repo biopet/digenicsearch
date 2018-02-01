@@ -29,12 +29,11 @@ import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.tool.ToolCommand
 import nl.biopet.utils.conversions.mapToYamlFile
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Dataset, Row, SparkSession}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.SparkConf
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object DigenicSearch extends ToolCommand[Args] {
