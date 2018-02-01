@@ -23,10 +23,12 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.File
 
+import htsjdk.samtools.SAMSequenceDictionary
 import nl.biopet.tools.digenicsearch.DigenicSearch.generateRegions
-import nl.biopet.utils.ngs.vcf
+import nl.biopet.utils.ngs.{vcf, fasta}
 
 case class Broadcasts(samples: Array[String],
+                      dict: SAMSequenceDictionary,
                       pedigree: PedigreeFileArray,
                       annotations: Set[String],
                       maxDistance: Option[Long],
@@ -90,8 +92,11 @@ object Broadcasts {
           s"External file is not used in a filter: ${externalFiles(idx)}")
     }
 
+    val dict = fasta.getCachedDict(cmdArgs.reference)
+
     Broadcasts(
       samples,
+      dict,
       pedigree,
       annotations,
       cmdArgs.maxDistance,
@@ -100,7 +105,7 @@ object Broadcasts {
       cmdArgs.inputFiles,
       cmdArgs.fractions,
       cmdArgs.detectionMode,
-      generateRegions(cmdArgs).toArray,
+      generateRegions(cmdArgs, dict).toArray,
       externalFiles,
       externalFilesKeys.map { case (key, _) => key },
       singleExternalFilters,

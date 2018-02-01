@@ -33,6 +33,7 @@ class DigenicSearchTest extends ToolTest[Args] {
 
     val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
     stats("total_pairs") shouldBe 10
+    new File(outputDir, "aggregation") shouldNot exist
   }
 
   @Test
@@ -189,6 +190,7 @@ class DigenicSearchTest extends ToolTest[Args] {
 
     val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
     stats("total_pairs") shouldBe 10
+    new File(outputDir, "aggregation") should exist
   }
 
 }

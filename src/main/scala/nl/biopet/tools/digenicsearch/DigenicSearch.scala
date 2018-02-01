@@ -23,6 +23,7 @@ package nl.biopet.tools.digenicsearch
 
 import java.io.File
 
+import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.variant.vcf.VCFFileReader
 import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.tool.ToolCommand
@@ -50,73 +51,80 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sparkSession: SparkSession =
       SparkSession.builder().config(sparkConf).getOrCreate()
     import sparkSession.implicits._
-    implicit val sc: SparkContext = sparkSession.sparkContext
-    logger.info(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
+    logger.info(
+      s"Context is up, see ${sparkSession.sparkContext.uiWebUrl.getOrElse("")}")
 
-    val broadcasts = sc.broadcast(Broadcasts.fromArgs(cmdArgs))
+    val broadcasts =
+      sparkSession.sparkContext.broadcast(Broadcasts.fromArgs(cmdArgs))
     logger.info("Broadcasting done")
 
-    val regionsRdd: RDD[(Int, List[Region])] =
-      sc.parallelize(broadcasts.value.regions.zipWithIndex.map {
-        case (list, idx) => idx -> list
-      }, broadcasts.value.regions.length)
+    val regions = regionsDataset(broadcasts)
+    val variants = variantsDataSet(regions, broadcasts)
+      .filter(x => singleAnnotationFilter(x, broadcasts.value))
+      .flatMap(x => x.filterExternalFractions(broadcasts.value))
+      .cache()
+    val variantsAllFiltered =
+      variants.flatMap(x => x.filterSingleFraction(broadcasts.value)).cache()
+    val singleFilterTotal = variantsAllFiltered.rdd.countAsync()
 
-    val variants: Dataset[IndexedVariantsList] =
-      variantsRdd(regionsRdd, broadcasts).toDS().cache()
+    val combinations =
+      createVariantCombinations(variantsAllFiltered, regions, broadcasts)
 
-    cmdArgs.aggregation.foreach { file =>
-      val bedRecordList = BedRecordList.fromFile(file)
-      val bedrecords = sc
-        .parallelize(
-          bedRecordList.allRecords
-            .map(r => Region(r.chr, r.start, r.end, r.name.getOrElse("")))
-            .toList)
-        .toDS()
-
-      val v: Dataset[Variant] = variants.flatMap(_.variants)
-      val j = bedrecords
-        .joinWith(
-          v,
-          bedrecords("contig") === v("contig") && bedrecords("start") <= v(
-            "pos") && bedrecords("end") >= v("pos"))
-        .groupBy("_1.name")
-
-      val outputFile = new File(cmdArgs.outputDir, "aggregation")
-      j.count().write.csv(outputFile.getAbsolutePath)
-    }
-
-    variants
-      .flatMap(_.variants.map(_.toCsv(broadcasts.value)))
-      .write
-      .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
-
-    val singleFilterTotal = countSingleFilterTotal(variants)
-
-    val indexCombination: Dataset[Combination] =
-      createCombinations(regionsRdd, broadcasts).toDS()
-
-    val variantCombinations =
-      createVariantCombinations(variants, indexCombination, broadcasts)
     val combinationFilter =
-      filterVariantCombinations(variantCombinations, broadcasts)
+      filterVariantCombinations(combinations, broadcasts)
         .map(_.cleanResults)
         .map(_.toResultLine(broadcasts.value))
-        //.repartition(500)
-        //.sort("contig1", "contig2", "pos1", "pos2")
         .cache()
 
     combinationFilter.write.csv(outputPairs(cmdArgs.outputDir).getAbsolutePath)
-
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
                    combinationFilter.count())
+    aggregate(cmdArgs, variants, broadcasts.value.dict)
 
-    sc.stop()
+    sparkSession.stop()
     logger.info("Done")
+  }
+
+  def regionsDataset(broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[IndexedRegions] = {
+    import sparkSession.implicits._
+    sparkSession.sparkContext
+      .parallelize(broadcasts.value.regions.zipWithIndex.map {
+        case (list, idx) => IndexedRegions(idx, list)
+      }, broadcasts.value.regions.length)
+      .toDS()
   }
 
   def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
   def outputVariants(outputDir: File): File = new File(outputDir, "variants")
+
+  def aggregate(cmdArgs: Args,
+                variants: Dataset[Variant],
+                dict: SAMSequenceDictionary)(
+      implicit sparkSession: SparkSession): Unit = {
+    import sparkSession.implicits._
+    cmdArgs.aggregation.foreach { file =>
+      val bedrecords = sparkSession.sparkContext
+        .parallelize(Region.fromBedFile(file, dict))
+        .toDS()
+
+      val j =
+        bedrecords
+          .joinWith(variants,
+                    bedrecords("contig") === variants("contig") && bedrecords(
+                      "start") <= variants("pos") && bedrecords("end") >= variants(
+                      "pos"))
+          .rdd
+          .map { case (r, v) => r.name -> v }
+          .groupByKey()
+          .map { case (g, l) => GeneCounts(g, l.size) }
+          .toDS()
+
+      val outputFile = new File(cmdArgs.outputDir, "aggregation")
+      j.write.csv(outputFile.getAbsolutePath)
+    }
+  }
 
   def checkExistsOutput(outputDir: File): Unit = {
     require(!outputPairs(outputDir).exists(),
@@ -135,41 +143,33 @@ object DigenicSearch extends ToolCommand[Args] {
                   new File(outputDir, "stats.yml"))
   }
 
-  def countSingleFilterTotal(variants: Dataset[IndexedVariantsList])(
-      implicit sparkSession: SparkSession): Future[Long] = {
-    import sparkSession.implicits._
-    val f = Future(
-      variants
-        .map(_.variants.length.toLong)
-        .reduce(_ + _))
-    f.onSuccess {
-      case x => logger.info("Total variants: " + x)
-    }
-    f
-  }
-
-  def createVariantCombinations(variants: Dataset[IndexedVariantsList],
-                                indexCombination: Dataset[Combination],
+  case class Temp(v1: Variant, i2: Int)
+  def createVariantCombinations(variants: Dataset[Variant],
+                                regionsRdd: Dataset[IndexedRegions],
                                 broadcasts: Broadcast[Broadcasts])(
       implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
-    val singleCombination = indexCombination
-      .joinWith(variants, indexCombination("i1") === variants("idx"))
-      .map { case (c, v) => CombinationSingle(v, c.i2) }
-    val combinationLists: Dataset[CombinationVariantList] = singleCombination
-      .joinWith(variants, singleCombination("i2") === variants("idx"))
-      .map { case (c, v) => CombinationVariantList(c.i1, v) }
 
-    combinationLists.flatMap { x =>
-      val same = x.i1.idx == x.i2.idx
-      for {
-        (v1, id1) <- x.i1.variants.zipWithIndex.toIterator
-        (v2, id2) <- x.i2.variants.zipWithIndex
-        if (!same || id1 < id2) &&
-          distanceFilter(v1, v2, broadcasts.value.maxDistance)
-      } yield
-        VariantCombination(v1, v2, Variant.alleleCombinations(v1, v2).toList)
-    }
+    val indexCombination = createCombinations(regionsRdd, broadcasts)
+
+    val single = indexCombination
+      .joinWith(variants, variants("regionsIdx") === indexCombination("i1"))
+      .map {
+        case (c, v1) =>
+          Temp(v1, c.i2)
+      }
+    single
+      .joinWith(variants, variants("regionsIdx") === single("i2"))
+      .flatMap {
+        case (t, v2) =>
+          val v1 = t.v1
+          if (v1.contig > v2.contig || v1.pos < v2.pos)
+            Some(
+              VariantCombination(v1,
+                                 v2,
+                                 Variant.alleleCombinations(v1, v2).toList))
+          else None
+      }
   }
 
   def filterVariantCombinations(combinations: Dataset[VariantCombination],
@@ -178,32 +178,29 @@ object DigenicSearch extends ToolCommand[Args] {
     import sparkSession.implicits._
 
     combinations
+      .filter(x => distanceFilter(x.v1, x.v2, broadcasts.value.maxDistance))
       .filter(pairedFilter(_, broadcasts.value.pairFilters))
       .flatMap(_.filterPairFraction(broadcasts.value))
       .flatMap(_.filterExternalPair(broadcasts.value))
   }
 
-  def variantsRdd(
-      regionsRdd: RDD[(Int, List[Region])],
-      broadcasts: Broadcast[Broadcasts]): RDD[IndexedVariantsList] = {
+  def variantsDataSet(regionsRdd: Dataset[IndexedRegions],
+                      broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[Variant] = {
+    import sparkSession.implicits._
     regionsRdd
-      .map {
-        case (idx, r) =>
-          loadRegions(idx, r, broadcasts.value)
-      }
-      .map { v =>
-        v.copy(variants =
-          v.variants.filter(singleAnnotationFilter(_, broadcasts.value)))
-      }
-      .map { v =>
-        v.copy(
-          variants =
-            v.variants.flatMap(_.filterSingleFraction(broadcasts.value)))
-      }
-      .map { v =>
-        v.copy(
-          variants =
-            v.variants.flatMap(_.filterExternalFractions(broadcasts.value)))
+      .mapPartitions { it =>
+        val readers = broadcasts.value.inputFiles.map(new VCFFileReader(_))
+        val externalReaders =
+          broadcasts.value.externalFiles.map(new VCFFileReader(_))
+        it.flatMap { r =>
+          r.regions.flatMap(
+            new LoadRegion(readers,
+                           externalReaders,
+                           _,
+                           r.idx,
+                           broadcasts.value))
+        }
       }
   }
 
@@ -224,17 +221,17 @@ object DigenicSearch extends ToolCommand[Args] {
   }
 
   /** This created a list of combinations rdds */
-  def createCombinations(
-      regionsRdd: RDD[(Int, List[Region])],
-      broadcasts: Broadcast[Broadcasts]): RDD[Combination] = {
-    regionsRdd.flatMap {
-      case (idx, regions) =>
-        for (i <- idx until broadcasts.value.regions.length
-             if distanceFilter(regions,
-                               broadcasts.value.regions(i),
-                               broadcasts.value.maxDistance)) yield {
-          Combination(idx, i)
-        }
+  def createCombinations(regionsRdd: Dataset[IndexedRegions],
+                         broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[Combination] = {
+    import sparkSession.implicits._
+    regionsRdd.flatMap { r =>
+      for (i <- r.idx until broadcasts.value.regions.length
+           if distanceFilter(r.regions,
+                             broadcasts.value.regions(i),
+                             broadcasts.value.maxDistance)) yield {
+        Combination(r.idx, i)
+      }
     }
   }
 
@@ -278,24 +275,9 @@ object DigenicSearch extends ToolCommand[Args] {
     }
   }
 
-  /**
-    * Load multiple regions as a single chunk into spark
-    * @param regions Regions to load
-    * @param broadcasts Broadcasted values
-    * @return
-    */
-  def loadRegions(idx: Int,
-                  regions: List[Region],
-                  broadcasts: Broadcasts): IndexedVariantsList = {
-    val readers = broadcasts.inputFiles.map(new VCFFileReader(_))
-    val externalReaders = broadcasts.externalFiles.map(new VCFFileReader(_))
-    IndexedVariantsList(
-      idx,
-      regions.flatMap(new LoadRegion(readers, externalReaders, _, broadcasts)))
-  }
-
   /** creates regions to analyse */
-  def generateRegions(cmdArgs: Args): List[List[Region]] = {
+  def generateRegions(cmdArgs: Args,
+                      dict: SAMSequenceDictionary): List[List[Region]] = {
     val regions = (cmdArgs.regions match {
       case Some(i) =>
         BedRecordList.fromFile(i).validateContigs(cmdArgs.reference)
@@ -303,7 +285,8 @@ object DigenicSearch extends ToolCommand[Args] {
     }).combineOverlap
       .scatter(cmdArgs.binSize,
                maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
-    regions.map(x => x.map(y => Region(y.chr, y.start, y.end)))
+    regions.map(x =>
+      x.map(y => Region(dict.getSequenceIndex(y.chr), y.start, y.end)))
   }
 
   def descriptionText: String =

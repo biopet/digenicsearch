@@ -35,24 +35,34 @@ import scala.collection.JavaConversions._
   * @param inputReaders Vcf input readers
   * @param externalInputReaders Vcf input readers
   * @param region Single regions to load
+  * @param regionIdx Index of region
   * @param broadcasts Broadcast values
   * @return
   */
 class LoadRegion(inputReaders: List[VCFFileReader],
                  externalInputReaders: Array[VCFFileReader],
                  region: Region,
+                 regionIdx: Int,
                  broadcasts: Broadcasts)
     extends Iterator[Variant] {
   protected val iterators: List[BufferedIterator[VariantContext]] =
     inputReaders
       .map(
-        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+        vcf.loadRegion(
+          _,
+          BedRecord(broadcasts.dict.getSequence(region.contig).getSequenceName,
+                    region.start,
+                    region.end)))
       .map(_.buffered)
 
   protected val externalIterators: Array[BufferedIterator[VariantContext]] =
     externalInputReaders
       .map(
-        vcf.loadRegion(_, BedRecord(region.contig, region.start, region.end)))
+        vcf.loadRegion(
+          _,
+          BedRecord(broadcasts.dict.getSequence(region.contig).getSequenceName,
+                    region.start,
+                    region.end)))
       .map(_.buffered)
 
   def hasNext: Boolean = iterators.exists(_.hasNext)
@@ -142,7 +152,8 @@ class LoadRegion(inputReaders: List[VCFFileReader],
       genotypes.map { case (_, g) => g }.toList,
       detectionResult,
       externalGenotypes,
-      externalDetetcionResults
+      externalDetetcionResults,
+      regionIdx
     )
   }
 }

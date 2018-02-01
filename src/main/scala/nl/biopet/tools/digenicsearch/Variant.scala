@@ -24,7 +24,7 @@ package nl.biopet.tools.digenicsearch
 import nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult
 
 case class Variant(
-    contig: String,
+    contig: Int,
     pos: Int,
     alleles: List[String],
     genotypes: List[Genotype],
@@ -32,7 +32,8 @@ case class Variant(
     genotypeAnnotation: List[GenotypeAnnotation],
     detectionResult: DetectionMode.DetectionResult,
     externalGenotypes: Array[List[Genotype]],
-    externalDetectionResult: Array[DetectionMode.DetectionResult]) {
+    externalDetectionResult: Array[DetectionMode.DetectionResult],
+    regionsIdx: Int) {
 
   def toCsv(broadcasts: Broadcasts): VariantCsv = {
     val pedigreeFractions = getPedigreeFractions(broadcasts)
@@ -54,7 +55,7 @@ case class Variant(
             .mkString("(", ",", ")")
       }
       .mkString(";")
-    VariantCsv(contig,
+    VariantCsv(broadcasts.dict.getSequence(contig).getSequenceName,
                pos,
                alleles.mkString(","),
                pedigreeFractions,

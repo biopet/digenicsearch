@@ -2,7 +2,7 @@ node('local') {
     try {
 
         stage('Init') {
-            env.JAVA_HOME="${tool 'JDK 8u102'}"
+            env.JAVA_HOME="${tool 'JDK 8u162'}"
             env.PATH="${env.JAVA_HOME}/bin:${env.PATH}"
             sh 'java -version'
             tool 'sbt 0.13.15'

@@ -138,11 +138,13 @@ case class VariantCombination(v1: Variant,
             .map { case ((c, f), _) => c.toString + s"=${f.getOrElse(0.0)}" }
             .mkString("(", ";", ")"))
       .mkString(";")
-    ResultLineCsv(v1.contig,
-                  v1.pos,
-                  v2.contig,
-                  v2.pos,
-                  fractions,
-                  externalFractions)
+    ResultLineCsv(
+      broadcasts.dict.getSequence(v1.contig).getSequenceName,
+      v1.pos,
+      broadcasts.dict.getSequence(v2.contig).getSequenceName,
+      v2.pos,
+      fractions,
+      externalFractions
+    )
   }
 }
