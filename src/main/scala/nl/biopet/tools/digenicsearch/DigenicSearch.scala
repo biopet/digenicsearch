@@ -70,7 +70,7 @@ object DigenicSearch extends ToolCommand[Args] {
       createAggregateFamilies(_, variantsFamilyFiltered, broadcasts))
 
     val famFut = aggregateFamilies.flatMap { counts =>
-      Some(counts.rdd.collectAsync().map { data =>
+      Some(counts.rdd.sortBy(_.gene).collectAsync().map { data =>
         val writer = new PrintWriter(outputFamilyGenes(cmdArgs.outputDir))
         writer.println(
           "gene\t" + broadcasts.value.pedigree.families.mkString("\t"))
