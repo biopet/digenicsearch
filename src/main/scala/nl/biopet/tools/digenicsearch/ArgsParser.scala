@@ -51,6 +51,9 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .unbounded()
     .action((x, c) => c.copy(pedFiles = x :: c.pedFiles))
     .text("Input ped file for family relations and effected/non-effected")
+  opt[Unit]("usingOtherFamilies")
+    .action((_, c) => c.copy(usingOtherFamilies = true))
+    .text("For filtering other families is used for filtering a single family")
   opt[String]("detectionMode")
     .action(
       (x, c) =>

@@ -36,7 +36,7 @@ case class Variant(
     regionsIdx: Int) {
 
   def toCsv(broadcasts: Broadcasts): VariantCsv = {
-    val pedigreeFractions = getPedigreeFractions(broadcasts)
+    val pedigreeFractions = getAffectedFractions(broadcasts)
       .map {
         case (k, v) =>
           val allele = if (k.isEmpty) "v" else k.mkString("/")
@@ -62,7 +62,7 @@ case class Variant(
                externalFractions)
   }
 
-  def getPedigreeFractions(
+  def getAffectedFractions(
       broadcasts: Broadcasts): Map[List[Short], PedigreeFraction] = {
     val alleles = detectionResult.result.toMap
 
@@ -76,11 +76,63 @@ case class Variant(
     }
   }
 
-  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
-
+  def getFamilyFractions(
+      broadcasts: Broadcasts): Array[Map[List[Short], PedigreeFraction]] = {
     val alleles = detectionResult.result.toMap
 
-    val result = this.getPedigreeFractions(broadcasts)
+    for (family <- broadcasts.pedigree.families.indices.toArray) yield {
+      for ((allele, result) <- alleles) yield {
+        val affectedGenotypes =
+          broadcasts.pedigree.familiesAffected(family).map(result)
+        val unaffectedGenotypes =
+          broadcasts.pedigree.familiesUnaffected(family).map(result)
+
+        allele -> PedigreeFraction(
+          Variant.affectedFraction(affectedGenotypes),
+          Variant.unaffectedFraction(unaffectedGenotypes))
+      }
+    }
+  }
+
+  def filterFamilyFractions(broadcasts: Broadcasts): Option[Variant] = {
+    val fractions = getFamilyFractions(broadcasts)
+
+    val alleles = detectionResult.result.map { case (a, _) => a }
+
+    val teRemove = alleles.filter { allele =>
+      val keep = fractions.map { family =>
+        val f = family(allele)
+        (f.unaffected <= broadcasts.fractionsCutoffs.singleFamilyUnaffectedFraction) && (f.affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction)
+      }
+
+      if (keep.forall(_ == true)) true
+      else {
+        val remove = keep.forall(_ == false)
+        if (!keep.forall(_ == false) && broadcasts.usingOtherFamilies) {
+          keep.zipWithIndex
+            .flatMap { case (b, idx) => if (b) None else Some(idx) }
+            .forall(fractions(_)(allele).affected <= 0.0)
+        } else remove
+      }
+    }
+
+    removeAlleles(teRemove.toSet)
+  }
+
+  def passedFamilies(broadcasts: Broadcasts): Array[Boolean] = {
+    val alleles = detectionResult.result.map { case (a, _) => a }
+
+    getFamilyFractions(broadcasts).map { map =>
+      alleles.exists { allele =>
+        val f = map(allele)
+        !(f.unaffected <= broadcasts.fractionsCutoffs.singleFamilyUnaffectedFraction) || !(f.affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction)
+      }
+    }
+  }
+
+  def filterSingleFraction(broadcasts: Broadcasts): Option[Variant] = {
+
+    val result = this.getAffectedFractions(broadcasts)
 
     val teRemove = result
       .filter {

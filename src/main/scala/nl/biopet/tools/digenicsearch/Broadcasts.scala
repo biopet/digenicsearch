@@ -41,7 +41,8 @@ case class Broadcasts(samples: Array[String],
                       externalFiles: Array[File],
                       externalFilesKeys: Array[String],
                       singleExternalFilters: Array[List[ExternalFilter]],
-                      pairExternalFilters: Array[List[ExternalFilter]])
+                      pairExternalFilters: Array[List[ExternalFilter]],
+                      usingOtherFamilies: Boolean)
 
 object Broadcasts {
   def fromArgs(cmdArgs: Args): Broadcasts = {
@@ -109,7 +110,8 @@ object Broadcasts {
       externalFiles,
       externalFilesKeys.map { case (key, _) => key },
       singleExternalFilters,
-      pairExternalFilters
+      pairExternalFilters,
+      cmdArgs.usingOtherFamilies
     )
   }
 }
