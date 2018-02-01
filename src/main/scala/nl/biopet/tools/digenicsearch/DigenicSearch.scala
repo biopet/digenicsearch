@@ -70,8 +70,6 @@ object DigenicSearch extends ToolCommand[Args] {
     val combinations =
       createVariantCombinations(variantsAllFiltered, regions, broadcasts)
 
-    val aggregateFuture = aggregate(cmdArgs, variants, broadcasts.value.dict)
-
     val combinationFilter =
       filterVariantCombinations(combinations, broadcasts)
         .map(_.cleanResults)
@@ -82,7 +80,7 @@ object DigenicSearch extends ToolCommand[Args] {
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
                    combinationFilter.count())
-    Await.result(aggregateFuture, Duration.Inf)
+    aggregate(cmdArgs, variants, broadcasts.value.dict)
 
     sparkSession.stop()
     logger.info("Done")
@@ -104,30 +102,27 @@ object DigenicSearch extends ToolCommand[Args] {
   def aggregate(cmdArgs: Args,
                 variants: Dataset[Variant],
                 dict: SAMSequenceDictionary)(
-      implicit sparkSession: SparkSession): Future[Unit] = {
+      implicit sparkSession: SparkSession): Unit = {
     import sparkSession.implicits._
-    Future {
-      cmdArgs.aggregation.foreach { file =>
-        val bedrecords = sparkSession.sparkContext
-          .parallelize(Region.fromBedFile(file, dict))
+    cmdArgs.aggregation.foreach { file =>
+      val bedrecords = sparkSession.sparkContext
+        .parallelize(Region.fromBedFile(file, dict))
+        .toDS()
+
+      val j =
+        bedrecords
+          .joinWith(variants,
+                    bedrecords("contig") === variants("contig") && bedrecords(
+                      "start") <= variants("pos") && bedrecords("end") >= variants(
+                      "pos"))
+          .rdd
+          .map { case (r, v) => r.name -> v }
+          .groupByKey()
+          .map { case (g, l) => GeneCounts(g, l.size) }
           .toDS()
 
-        val j =
-          bedrecords
-            .joinWith(
-              variants,
-              bedrecords("contig") === variants("contig") && bedrecords(
-                "start") <= variants("pos") && bedrecords("end") >= variants(
-                "pos"))
-            .rdd
-            .map { case (r, v) => r.name -> v }
-            .groupByKey()
-            .map { case (g, l) => GeneCounts(g, l.size) }
-            .toDS()
-
-        val outputFile = new File(cmdArgs.outputDir, "aggregation")
-        j.write.csv(outputFile.getAbsolutePath)
-      }
+      val outputFile = new File(cmdArgs.outputDir, "aggregation")
+      j.write.csv(outputFile.getAbsolutePath)
     }
   }
 
