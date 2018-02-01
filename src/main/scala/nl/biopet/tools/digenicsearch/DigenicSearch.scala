@@ -98,7 +98,9 @@ object DigenicSearch extends ToolCommand[Args] {
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
                    combinationFilter.count())
-    aggregateRegions.foreach(aggregateTotal(_, variants))
+    aggregateRegions.foreach(
+      aggregateTotal(_, variants).write
+        .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))
     famFut.foreach(Await.result(_, Duration.Inf))
 
     sparkSession.stop()
@@ -116,7 +118,9 @@ object DigenicSearch extends ToolCommand[Args] {
   }
 
   def outputFamilyGenes(outputDir: File): File =
-    new File(outputDir, "familyGenes")
+    new File(outputDir, "familyGenes.tsv")
+  def outputAggregation(outputDir: File): File =
+    new File(outputDir, "aggregation")
   def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
   def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
