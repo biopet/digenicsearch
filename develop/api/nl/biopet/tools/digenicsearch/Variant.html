@@ -47,7 +47,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Variant</span><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="pos">pos: <span class="extype" name="scala.Int">Int</span></span>, <span name="alleles">alleles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="genotypes">genotypes: <span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]</span>, <span name="annotations">annotations: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationValue.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationValue">AnnotationValue</a>] = <span class="symbol">List()</span></span>, <span name="genotypeAnnotation">genotypeAnnotation: <span class="extype" name="scala.List">List</span>[<a href="package$$GenotypeAnnotation.html" class="extype" name="nl.biopet.tools.digenicsearch.GenotypeAnnotation">GenotypeAnnotation</a>]</span>, <span name="detectionResult">detectionResult: <a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a></span>, <span name="externalGenotypes">externalGenotypes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]]</span>, <span name="externalDetectionResult">externalDetectionResult: <span class="extype" name="scala.Array">Array</span>[<a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Variant</span><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Int">Int</span></span>, <span name="pos">pos: <span class="extype" name="scala.Int">Int</span></span>, <span name="alleles">alleles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="genotypes">genotypes: <span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]</span>, <span name="annotations">annotations: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationValue.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationValue">AnnotationValue</a>] = <span class="symbol">List()</span></span>, <span name="genotypeAnnotation">genotypeAnnotation: <span class="extype" name="scala.List">List</span>[<a href="package$$GenotypeAnnotation.html" class="extype" name="nl.biopet.tools.digenicsearch.GenotypeAnnotation">GenotypeAnnotation</a>]</span>, <span name="detectionResult">detectionResult: <a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a></span>, <span name="externalGenotypes">externalGenotypes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]]</span>, <span name="externalDetectionResult">externalDetectionResult: <span class="extype" name="scala.Array">Array</span>[<a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a>]</span>, <span name="regionsIdx">regionsIdx: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -91,7 +91,7 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="nl.biopet.tools.digenicsearch.Variant#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(contig:String,pos:Int,alleles:List[String],genotypes:List[nl.biopet.tools.digenicsearch.Genotype],annotations:List[nl.biopet.tools.digenicsearch.AnnotationValue],genotypeAnnotation:List[nl.biopet.tools.digenicsearch.GenotypeAnnotation],detectionResult:nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult,externalGenotypes:Array[List[nl.biopet.tools.digenicsearch.Genotype]],externalDetectionResult:Array[nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult]):nl.biopet.tools.digenicsearch.Variant"></a>
+      <a id="&lt;init&gt;(contig:Int,pos:Int,alleles:List[String],genotypes:List[nl.biopet.tools.digenicsearch.Genotype],annotations:List[nl.biopet.tools.digenicsearch.AnnotationValue],genotypeAnnotation:List[nl.biopet.tools.digenicsearch.GenotypeAnnotation],detectionResult:nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult,externalGenotypes:Array[List[nl.biopet.tools.digenicsearch.Genotype]],externalDetectionResult:Array[nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult],regionsIdx:Int):nl.biopet.tools.digenicsearch.Variant"></a>
       <a id="&lt;init&gt;:Variant"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -99,10 +99,10 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Variant</span><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="pos">pos: <span class="extype" name="scala.Int">Int</span></span>, <span name="alleles">alleles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="genotypes">genotypes: <span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]</span>, <span name="annotations">annotations: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationValue.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationValue">AnnotationValue</a>] = <span class="symbol">List()</span></span>, <span name="genotypeAnnotation">genotypeAnnotation: <span class="extype" name="scala.List">List</span>[<a href="package$$GenotypeAnnotation.html" class="extype" name="nl.biopet.tools.digenicsearch.GenotypeAnnotation">GenotypeAnnotation</a>]</span>, <span name="detectionResult">detectionResult: <a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a></span>, <span name="externalGenotypes">externalGenotypes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]]</span>, <span name="externalDetectionResult">externalDetectionResult: <span class="extype" name="scala.Array">Array</span>[<a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a>]</span>)</span>
+        <span class="name">Variant</span><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Int">Int</span></span>, <span name="pos">pos: <span class="extype" name="scala.Int">Int</span></span>, <span name="alleles">alleles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="genotypes">genotypes: <span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]</span>, <span name="annotations">annotations: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationValue.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationValue">AnnotationValue</a>] = <span class="symbol">List()</span></span>, <span name="genotypeAnnotation">genotypeAnnotation: <span class="extype" name="scala.List">List</span>[<a href="package$$GenotypeAnnotation.html" class="extype" name="nl.biopet.tools.digenicsearch.GenotypeAnnotation">GenotypeAnnotation</a>]</span>, <span name="detectionResult">detectionResult: <a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a></span>, <span name="externalGenotypes">externalGenotypes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]]</span>, <span name="externalDetectionResult">externalDetectionResult: <span class="extype" name="scala.Array">Array</span>[<a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a>]</span>, <span name="regionsIdx">regionsIdx: <span class="extype" name="scala.Int">Int</span></span>)</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@&lt;init&gt;(contig:String,pos:Int,alleles:List[String],genotypes:List[nl.biopet.tools.digenicsearch.Genotype],annotations:List[nl.biopet.tools.digenicsearch.AnnotationValue],genotypeAnnotation:List[nl.biopet.tools.digenicsearch.GenotypeAnnotation],detectionResult:nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult,externalGenotypes:Array[List[nl.biopet.tools.digenicsearch.Genotype]],externalDetectionResult:Array[nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult]):nl.biopet.tools.digenicsearch.Variant" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@&lt;init&gt;(contig:Int,pos:Int,alleles:List[String],genotypes:List[nl.biopet.tools.digenicsearch.Genotype],annotations:List[nl.biopet.tools.digenicsearch.AnnotationValue],genotypeAnnotation:List[nl.biopet.tools.digenicsearch.GenotypeAnnotation],detectionResult:nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult,externalGenotypes:Array[List[nl.biopet.tools.digenicsearch.Genotype]],externalDetectionResult:Array[nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult],regionsIdx:Int):nl.biopet.tools.digenicsearch.Variant" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -242,18 +242,18 @@
               
         </dd></dl></div>
     </li><li name="nl.biopet.tools.digenicsearch.Variant#contig" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="contig:String"></a>
-      <a id="contig:String"></a>
+      <a id="contig:Int"></a>
+      <a id="contig:Int"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">contig</span><span class="result">: <span class="extype" name="scala.Predef.String">String</span></span>
+        <span class="name">contig</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@contig:String" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@contig:Int" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -549,6 +549,23 @@
       </span>
       </h4><span class="permalink">
       <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@pos:Int" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
+    </li><li name="nl.biopet.tools.digenicsearch.Variant#regionsIdx" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="regionsIdx:Int"></a>
+      <a id="regionsIdx:Int"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">regionsIdx</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@regionsIdx:Int" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>

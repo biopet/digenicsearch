@@ -182,7 +182,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="Broadcasts.html"><span class="name">Broadcasts</span></a><span class="params">(<span name="samples">samples: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="pedigree">pedigree: <a href="PedigreeFileArray.html" class="extype" name="nl.biopet.tools.digenicsearch.PedigreeFileArray">PedigreeFileArray</a></span>, <span name="annotations">annotations: <span class="extype" name="scala.Predef.Set">Set</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="maxDistance">maxDistance: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="singleFilters">singleFilters: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationFilter">AnnotationFilter</a>]</span>, <span name="pairFilters">pairFilters: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationFilter">AnnotationFilter</a>]</span>, <span name="inputFiles">inputFiles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="java.io.File">File</span>]</span>, <span name="fractionsCutoffs">fractionsCutoffs: <a href="FractionsCutoffs.html" class="extype" name="nl.biopet.tools.digenicsearch.FractionsCutoffs">FractionsCutoffs</a></span>, <span name="detectionMode">detectionMode: <a href="DetectionMode$.html#ValueextendsOrdered[Enumeration.this.Value]withSerializable" class="extmbr" name="nl.biopet.tools.digenicsearch.DetectionMode.Value">DetectionMode.Value</a></span>, <span name="regions">regions: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Region.html" class="extype" name="nl.biopet.tools.digenicsearch.Region">Region</a>]]</span>, <span name="externalFiles">externalFiles: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="java.io.File">File</span>]</span>, <span name="externalFilesKeys">externalFilesKeys: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="singleExternalFilters">singleExternalFilters: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$ExternalFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.ExternalFilter">ExternalFilter</a>]]</span>, <span name="pairExternalFilters">pairExternalFilters: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$ExternalFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.ExternalFilter">ExternalFilter</a>]]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="Broadcasts.html"><span class="name">Broadcasts</span></a><span class="params">(<span name="samples">samples: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="dict">dict: <span class="extype" name="htsjdk.samtools.SAMSequenceDictionary">SAMSequenceDictionary</span></span>, <span name="pedigree">pedigree: <a href="PedigreeFileArray.html" class="extype" name="nl.biopet.tools.digenicsearch.PedigreeFileArray">PedigreeFileArray</a></span>, <span name="annotations">annotations: <span class="extype" name="scala.Predef.Set">Set</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="maxDistance">maxDistance: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="singleFilters">singleFilters: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationFilter">AnnotationFilter</a>]</span>, <span name="pairFilters">pairFilters: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationFilter">AnnotationFilter</a>]</span>, <span name="inputFiles">inputFiles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="java.io.File">File</span>]</span>, <span name="fractionsCutoffs">fractionsCutoffs: <a href="FractionsCutoffs.html" class="extype" name="nl.biopet.tools.digenicsearch.FractionsCutoffs">FractionsCutoffs</a></span>, <span name="detectionMode">detectionMode: <a href="DetectionMode$.html#ValueextendsOrdered[Enumeration.this.Value]withSerializable" class="extmbr" name="nl.biopet.tools.digenicsearch.DetectionMode.Value">DetectionMode.Value</a></span>, <span name="regions">regions: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="Region.html" class="extype" name="nl.biopet.tools.digenicsearch.Region">Region</a>]]</span>, <span name="externalFiles">externalFiles: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="java.io.File">File</span>]</span>, <span name="externalFilesKeys">externalFilesKeys: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="singleExternalFilters">singleExternalFilters: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$ExternalFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.ExternalFilter">ExternalFilter</a>]]</span>, <span name="pairExternalFilters">pairExternalFilters: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$ExternalFilter.html" class="extype" name="nl.biopet.tools.digenicsearch.ExternalFilter">ExternalFilter</a>]]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@BroadcastsextendsProductwithSerializable" title="Permalink" target="_top">
@@ -203,40 +203,6 @@
       </span>
       </h4><span class="permalink">
       <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@CombinationextendsProductwithSerializable" title="Permalink" target="_top">
-        <img src="../../../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="nl.biopet.tools.digenicsearch.CombinationSingle" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="CombinationSingleextendsProductwithSerializable"></a>
-      <a id="CombinationSingle:CombinationSingle"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">case class</span>
-      </span>
-      <span class="symbol">
-        <a href="package$$CombinationSingle.html"><span class="name">CombinationSingle</span></a><span class="params">(<span name="i1">i1: <a href="package$$IndexedVariantsList.html" class="extype" name="nl.biopet.tools.digenicsearch.IndexedVariantsList">IndexedVariantsList</a></span>, <span name="i2">i2: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@CombinationSingleextendsProductwithSerializable" title="Permalink" target="_top">
-        <img src="../../../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="nl.biopet.tools.digenicsearch.CombinationVariantList" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="CombinationVariantListextendsProductwithSerializable"></a>
-      <a id="CombinationVariantList:CombinationVariantList"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">case class</span>
-      </span>
-      <span class="symbol">
-        <a href="package$$CombinationVariantList.html"><span class="name">CombinationVariantList</span></a><span class="params">(<span name="i1">i1: <a href="package$$IndexedVariantsList.html" class="extype" name="nl.biopet.tools.digenicsearch.IndexedVariantsList">IndexedVariantsList</a></span>, <span name="i2">i2: <a href="package$$IndexedVariantsList.html" class="extype" name="nl.biopet.tools.digenicsearch.IndexedVariantsList">IndexedVariantsList</a></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@CombinationVariantListextendsProductwithSerializable" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -275,6 +241,23 @@
       </a>
     </span>
       
+    </li><li name="nl.biopet.tools.digenicsearch.GeneCounts" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="GeneCountsextendsProductwithSerializable"></a>
+      <a id="GeneCounts:GeneCounts"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="package$$GeneCounts.html"><span class="name">GeneCounts</span></a><span class="params">(<span name="gene">gene: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="count">count: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@GeneCountsextendsProductwithSerializable" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
     </li><li name="nl.biopet.tools.digenicsearch.Genotype" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="GenotypeextendsProductwithSerializable"></a>
       <a id="Genotype:Genotype"></a>
@@ -309,36 +292,19 @@
       </a>
     </span>
       
-    </li><li name="nl.biopet.tools.digenicsearch.IndexedVariant" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IndexedVariantextendsProductwithSerializable"></a>
-      <a id="IndexedVariant:IndexedVariant"></a>
+    </li><li name="nl.biopet.tools.digenicsearch.IndexedRegions" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="IndexedRegionsextendsProductwithSerializable"></a>
+      <a id="IndexedRegions:IndexedRegions"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="package$$IndexedVariant.html"><span class="name">IndexedVariant</span></a><span class="params">(<span name="idx">idx: <span class="extype" name="scala.Int">Int</span></span>, <span name="variant">variant: <a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="package$$IndexedRegions.html"><span class="name">IndexedRegions</span></a><span class="params">(<span name="idx">idx: <span class="extype" name="scala.Int">Int</span></span>, <span name="regions">regions: <span class="extype" name="scala.List">List</span>[<a href="Region.html" class="extype" name="nl.biopet.tools.digenicsearch.Region">Region</a>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@IndexedVariantextendsProductwithSerializable" title="Permalink" target="_top">
-        <img src="../../../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="nl.biopet.tools.digenicsearch.IndexedVariantsList" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IndexedVariantsListextendsProductwithSerializable"></a>
-      <a id="IndexedVariantsList:IndexedVariantsList"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">case class</span>
-      </span>
-      <span class="symbol">
-        <a href="package$$IndexedVariantsList.html"><span class="name">IndexedVariantsList</span></a><span class="params">(<span name="idx">idx: <span class="extype" name="scala.Int">Int</span></span>, <span name="variants">variants: <span class="extype" name="scala.List">List</span>[<a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@IndexedVariantsListextendsProductwithSerializable" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@IndexedRegionsextendsProductwithSerializable" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -404,7 +370,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="package$$Region.html"><span class="name">Region</span></a><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="start">start: <span class="extype" name="scala.Int">Int</span></span>, <span name="end">end: <span class="extype" name="scala.Int">Int</span></span>, <span name="name">name: <span class="extype" name="scala.Predef.String">String</span> = <span class="symbol">&quot;&quot;</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="Region.html"><span class="name">Region</span></a><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Int">Int</span></span>, <span name="start">start: <span class="extype" name="scala.Int">Int</span></span>, <span name="end">end: <span class="extype" name="scala.Int">Int</span></span>, <span name="name">name: <span class="extype" name="scala.Predef.String">String</span> = <span class="symbol">&quot;&quot;</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@RegionextendsProductwithSerializable" title="Permalink" target="_top">
@@ -438,7 +404,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="Variant.html"><span class="name">Variant</span></a><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="pos">pos: <span class="extype" name="scala.Int">Int</span></span>, <span name="alleles">alleles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="genotypes">genotypes: <span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]</span>, <span name="annotations">annotations: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationValue.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationValue">AnnotationValue</a>] = <span class="symbol">List()</span></span>, <span name="genotypeAnnotation">genotypeAnnotation: <span class="extype" name="scala.List">List</span>[<a href="package$$GenotypeAnnotation.html" class="extype" name="nl.biopet.tools.digenicsearch.GenotypeAnnotation">GenotypeAnnotation</a>]</span>, <span name="detectionResult">detectionResult: <a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a></span>, <span name="externalGenotypes">externalGenotypes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]]</span>, <span name="externalDetectionResult">externalDetectionResult: <span class="extype" name="scala.Array">Array</span>[<a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="Variant.html"><span class="name">Variant</span></a><span class="params">(<span name="contig">contig: <span class="extype" name="scala.Int">Int</span></span>, <span name="pos">pos: <span class="extype" name="scala.Int">Int</span></span>, <span name="alleles">alleles: <span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="genotypes">genotypes: <span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]</span>, <span name="annotations">annotations: <span class="extype" name="scala.List">List</span>[<a href="package$$AnnotationValue.html" class="extype" name="nl.biopet.tools.digenicsearch.AnnotationValue">AnnotationValue</a>] = <span class="symbol">List()</span></span>, <span name="genotypeAnnotation">genotypeAnnotation: <span class="extype" name="scala.List">List</span>[<a href="package$$GenotypeAnnotation.html" class="extype" name="nl.biopet.tools.digenicsearch.GenotypeAnnotation">GenotypeAnnotation</a>]</span>, <span name="detectionResult">detectionResult: <a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a></span>, <span name="externalGenotypes">externalGenotypes: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.List">List</span>[<a href="package$$Genotype.html" class="extype" name="nl.biopet.tools.digenicsearch.Genotype">Genotype</a>]]</span>, <span name="externalDetectionResult">externalDetectionResult: <span class="extype" name="scala.Array">Array</span>[<a href="DetectionMode$$DetectionResult.html" class="extype" name="nl.biopet.tools.digenicsearch.DetectionMode.DetectionResult">DetectionResult</a>]</span>, <span name="regionsIdx">regionsIdx: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@VariantextendsProductwithSerializable" title="Permalink" target="_top">
@@ -568,6 +534,23 @@
       </span>
       </h4><span class="permalink">
       <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@PedigreeFileArray" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
+    </li><li name="nl.biopet.tools.digenicsearch.Region" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Region"></a>
+      <a id="Region:Region"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="Region$.html"><span class="name">Region</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.package@Region" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
