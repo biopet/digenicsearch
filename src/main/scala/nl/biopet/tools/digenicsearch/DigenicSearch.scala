@@ -100,6 +100,7 @@ object DigenicSearch extends ToolCommand[Args] {
     aggregateRegions.foreach(
       aggregateTotal(_, variants).write
         .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))
+    variantsAllFiltered.map(_.toCsv(broadcasts.value)).write.csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
     famFut.foreach(Await.result(_, Duration.Inf))
 
     sparkSession.stop()
