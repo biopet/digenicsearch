@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2017 Sequencing Analysis Support Core - Leiden University Medical Center
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package nl.biopet.tools.digenicsearch
 
 import java.io.File
@@ -39,36 +60,51 @@ object DigenicSearch extends ToolCommand[Args] {
     implicit val sc: SparkContext = sparkSession.sparkContext
     println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
 
-    val samples = sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
-    require(samples.value.lengthCompare(samples.value.distinct.length) == 0, "Duplicated samples detected")
+    val samples =
+      sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
+    require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
+            "Duplicated samples detected")
 
 //    val dict = SequenceDictionary.fromSAMSequenceDictionary(fasta.getCachedDict(cmdArgs.reference))
 
-    val annotations: Broadcast[Set[String]] = sc.broadcast(cmdArgs.singleAnnotationFilter.map(_._1).toSet ++ cmdArgs.pairAnnotationFilter.map(_._1).toSet)
+    val annotations: Broadcast[Set[String]] = sc.broadcast(
+      cmdArgs.singleAnnotationFilter
+        .map(_._1)
+        .toSet ++ cmdArgs.pairAnnotationFilter.map(_._1).toSet)
 
     val singleFilters = sc.broadcast(cmdArgs.singleAnnotationFilter)
     val pairFilters = sc.broadcast(cmdArgs.pairAnnotationFilter)
     val inputFiles = sc.broadcast(cmdArgs.inputFiles)
     val regions = generateRegions(cmdArgs).toArray
     val regionsRdd = sc.parallelize(regions, regions.size)
-    val blablabla = regions.zipWithIndex.map(r => r._2 -> sc.parallelize(Seq(r._1), 1).mapPartitions { it =>
-      val readers = inputFiles.value.map(new VCFFileReader(_))
-      it.map { region =>
-        loadRegion(readers, region, samples, annotations).toList
-      }
-    }.cache()).toMap
+    val blablabla = regions.zipWithIndex
+      .map(
+        r =>
+          r._2 -> sc
+            .parallelize(Seq(r._1), 1)
+            .mapPartitions { it =>
+              val readers = inputFiles.value.map(new VCFFileReader(_))
+              it.map { region =>
+                loadRegion(readers, region, samples, annotations).toList
+              }
+            }
+            .cache())
+      .toMap
 
-    val futures2: Seq[Future[Long]] = for (i <- 0 to regions.length; j <- i to regions.length) yield {
-      val rdd = blablabla(i).union(blablabla(j)).repartition(1)
-      rdd.mapPartitions { bla =>
-        val list1 = bla.next()
-        val list2 = bla.next()
-        for (v1 <- list1.toIterator; v2 <- list2) yield {
-          (v1, v2)
-        }
-        //Iterator(bla.size)
-      }.countAsync()
-    }
+    val futures2: Seq[Future[Long]] =
+      for (i <- 0 to regions.length; j <- i to regions.length) yield {
+        val rdd = blablabla(i).union(blablabla(j)).repartition(1)
+        rdd
+          .mapPartitions { bla =>
+            val list1 = bla.next()
+            val list2 = bla.next()
+            for (v1 <- list1.toIterator; v2 <- list2) yield {
+              (v1, v2)
+            }
+          //Iterator(bla.size)
+          }
+          .countAsync()
+      }
 
     println(Await.result(Future.sequence(futures2), Duration.Inf).sum)
 
@@ -82,29 +118,38 @@ object DigenicSearch extends ToolCommand[Args] {
     }
     val singleFilter = variants
       .filter { v =>
-      singleFilters.value.isEmpty ||
-      singleFilters.value.forall { c =>
-        v.annotations.find(_._1 == c._1).get._2.forall(c._2)
-      }
-    }.repartition(250)
-
-    val idxVariant = singleFilter.mapPartitionsWithIndex { case (idx, it) =>
-      Iterator(VariantList(idx, it.toArray))
-    }.toDS().cache()
-
-    val futures: Seq[Future[Long]] = for (i <- 1 until 250; j <- i until 250) yield {
-      val v1 = idxVariant.filter(idxVariant("idx") === i)
-      val v2 = idxVariant.filter(idxVariant("idx") === j)
-
-      val rdd = v1.union(v2).repartition(1)
-      rdd.mapPartitions { bla =>
-        val list1 = bla.next()
-        val list2 = bla.next()
-        for (v1 <- list1.variants.toIterator; v2 <- list2.variants) yield {
-          (v1, v2)
+        singleFilters.value.isEmpty ||
+        singleFilters.value.forall { c =>
+          v.annotations.find(_._1 == c._1).get._2.forall(c._2)
         }
-        //Iterator(bla.size)
-      }.rdd.countAsync()
+      }
+      .repartition(250)
+
+    val idxVariant = singleFilter
+      .mapPartitionsWithIndex {
+        case (idx, it) =>
+          Iterator(VariantList(idx, it.toArray))
+      }
+      .toDS()
+      .cache()
+
+    val futures: Seq[Future[Long]] = for (i <- 1 until 250; j <- i until 250)
+      yield {
+        val v1 = idxVariant.filter(idxVariant("idx") === i)
+        val v2 = idxVariant.filter(idxVariant("idx") === j)
+
+        val rdd = v1.union(v2).repartition(1)
+        rdd
+          .mapPartitions { bla =>
+            val list1 = bla.next()
+            val list2 = bla.next()
+            for (v1 <- list1.variants.toIterator; v2 <- list2.variants) yield {
+              (v1, v2)
+            }
+          //Iterator(bla.size)
+          }
+          .rdd
+          .countAsync()
 //      println(count)
 //      Future(count)
 //      rdd.map { case (v1, v2) =>
@@ -112,7 +157,7 @@ object DigenicSearch extends ToolCommand[Args] {
 //
 //        }).length.toLong
 //      }.countAsync()
-    }
+      }
 
     val bla = Await.result(Future.sequence(futures), Duration.Inf).sum
 
@@ -136,10 +181,11 @@ object DigenicSearch extends ToolCommand[Args] {
     logger.info("Done")
   }
 
-  def loadRegion(inputReaders: List[VCFFileReader],
-                 region: Region,
-                 samples: Broadcast[Array[String]],
-                 annotationsFields: Broadcast[Set[String]]): Iterator[Variant] = {
+  def loadRegion(
+      inputReaders: List[VCFFileReader],
+      region: Region,
+      samples: Broadcast[Array[String]],
+      annotationsFields: Broadcast[Set[String]]): Iterator[Variant] = {
     val bedRecord = BedRecord(region.contig, region.start, region.end)
     new Iterator[Variant] {
       protected val iterators: List[BufferedIterator[VariantContext]] =
@@ -149,7 +195,10 @@ object DigenicSearch extends ToolCommand[Args] {
 
       def next(): Variant = {
         val position = iterators.filter(_.hasNext).map(_.head.getStart).min
-        val records = iterators.filter(_.hasNext).filter(_.head.getStart == position).map(_.next())
+        val records = iterators
+          .filter(_.hasNext)
+          .filter(_.head.getStart == position)
+          .map(_.next())
         val allAlleles = records.flatMap(_.getAlleles)
         val refAlleles = allAlleles.filter(_.isReference)
         val annotations = annotationsFields.value.map { field =>
@@ -160,11 +209,14 @@ object DigenicSearch extends ToolCommand[Args] {
           }.toArray
         }.toArray
         val alleles: Array[String] = if (refAlleles.length > 1) {
-          throw new UnsupportedOperationException("Multiple reference alleles found")
+          throw new UnsupportedOperationException(
+            "Multiple reference alleles found")
         } else allAlleles.map(_.toString).toArray
         val genotypes = samples.value.map { sampleId =>
           val bla = records.flatMap(x => Option(x.getGenotype(sampleId)))
-          val g = bla.head.getAlleles.map(x => alleles.indexOf(x.toString).toShort).toArray
+          val g = bla.head.getAlleles
+            .map(x => alleles.indexOf(x.toString).toShort)
+            .toArray
           Genotype(g, bla.head.getDP, bla.head.getDP)
         }
         Variant(bedRecord.chr, position, alleles, genotypes, annotations)
@@ -180,7 +232,7 @@ object DigenicSearch extends ToolCommand[Args] {
       case _ => BedRecordList.fromReference(cmdArgs.reference)
     }).combineOverlap
       .scatter(cmdArgs.binSize,
-        maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
+               maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
       .flatten
     regions.map(x => Region(x.chr, x.start, x.end))
   }
