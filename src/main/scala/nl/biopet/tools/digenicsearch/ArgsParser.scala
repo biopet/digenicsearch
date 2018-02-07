@@ -51,6 +51,17 @@ class ArgsParser(toolCommand: ToolCommand[Args])
     .unbounded()
     .action((x, c) => c.copy(pedFiles = x :: c.pedFiles))
     .text("Input ped file for family relations and effected/non-effected")
+  opt[Unit]("usingOtherFamilies")
+    .action((_, c) => c.copy(usingOtherFamilies = true))
+    .text(
+      "This option uses affected members from other families to " +
+        "check if the variant is correlated to the trait. " +
+        "If the variant in the other family is above the treshold fraction, " +
+        "then it is likely to be related to the trait. " +
+        "If the fraction of the variant is 0.0 in the members of " +
+        "the affected family then it is still possible it is related to the trait. " +
+        "If the fraction of the variant is between 0.0 and the threshold fraction, " +
+        "then the variant is probably not related to the trait and is filtered out.")
   opt[String]("detectionMode")
     .action(
       (x, c) =>

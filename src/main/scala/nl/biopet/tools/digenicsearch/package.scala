@@ -49,6 +49,7 @@ package object digenicsearch {
   }
 
   case class GeneCounts(gene: String, count: Long)
+  case class GeneFamilyCounts(gene: String, count: Array[Long])
 
   case class VariantCsv(contig: String,
                         pos: Int,

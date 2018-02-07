@@ -21,7 +21,7 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
+import java.io.{File, PrintWriter}
 
 import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.variant.vcf.VCFFileReader
@@ -29,12 +29,11 @@ import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.tool.ToolCommand
 import nl.biopet.utils.conversions.mapToYamlFile
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.SparkConf
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object DigenicSearch extends ToolCommand[Args] {
@@ -59,10 +58,28 @@ object DigenicSearch extends ToolCommand[Args] {
     logger.info("Broadcasting done")
 
     val regions = regionsDataset(broadcasts)
+    val aggregateRegions =
+      createAggregateRegions(cmdArgs.aggregation, broadcasts.value.dict)
     val variants = variantsDataSet(regions, broadcasts)
       .filter(x => singleAnnotationFilter(x, broadcasts.value))
       .flatMap(x => x.filterExternalFractions(broadcasts.value))
       .cache()
+    val variantsFamilyFiltered =
+      variants.flatMap(x => x.filterFamilyFractions(broadcasts.value)).cache()
+    val aggregateFamilies = aggregateRegions.map(
+      createAggregateFamilies(_, variantsFamilyFiltered, broadcasts))
+
+    val familyFuture = aggregateFamilies.flatMap { counts =>
+      Some(counts.rdd.sortBy(_.gene).collectAsync().map { data =>
+        val writer = new PrintWriter(outputFamilyGenes(cmdArgs.outputDir))
+        writer.println(
+          "gene\t" + broadcasts.value.pedigree.families.mkString("\t"))
+        data.foreach(x =>
+          writer.println(x.gene + "\t" + x.count.mkString("\t")))
+        writer.close()
+      })
+    }
+
     val variantsAllFiltered =
       variants.flatMap(x => x.filterSingleFraction(broadcasts.value)).cache()
     val singleFilterTotal = variantsAllFiltered.rdd.countAsync()
@@ -80,12 +97,20 @@ object DigenicSearch extends ToolCommand[Args] {
     writeStatsFile(cmdArgs.outputDir,
                    Await.result(singleFilterTotal, Duration.Inf),
                    combinationFilter.count())
-    aggregate(cmdArgs, variants, broadcasts.value.dict)
+    aggregateRegions.foreach(
+      aggregateTotal(_, variants).write
+        .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))
+    variantsAllFiltered
+      .map(_.toCsv(broadcasts.value))
+      .write
+      .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
+    familyFuture.foreach(Await.result(_, Duration.Inf))
 
     sparkSession.stop()
     logger.info("Done")
   }
 
+  /** Create regions as dataset */
   def regionsDataset(broadcasts: Broadcast[Broadcasts])(
       implicit sparkSession: SparkSession): Dataset[IndexedRegions] = {
     import sparkSession.implicits._
@@ -96,34 +121,76 @@ object DigenicSearch extends ToolCommand[Args] {
       .toDS()
   }
 
+  def outputFamilyGenes(outputDir: File): File =
+    new File(outputDir, "familyGenes.tsv")
+  def outputAggregation(outputDir: File): File =
+    new File(outputDir, "aggregation")
   def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
   def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
-  def aggregate(cmdArgs: Args,
-                variants: Dataset[Variant],
-                dict: SAMSequenceDictionary)(
-      implicit sparkSession: SparkSession): Unit = {
+  /** Create aggregate regions as dataset if this is given on the commandline */
+  def createAggregateRegions(aggregationFile: Option[File],
+                             dict: SAMSequenceDictionary)(
+      implicit sparkSession: SparkSession): Option[Dataset[Region]] = {
     import sparkSession.implicits._
-    cmdArgs.aggregation.foreach { file =>
-      val bedrecords = sparkSession.sparkContext
+    aggregationFile.map { file =>
+      sparkSession.sparkContext
         .parallelize(Region.fromBedFile(file, dict))
         .toDS()
-
-      val j =
-        bedrecords
-          .joinWith(variants,
-                    bedrecords("contig") === variants("contig") && bedrecords(
-                      "start") <= variants("pos") && bedrecords("end") >= variants(
-                      "pos"))
-          .rdd
-          .map { case (r, v) => r.name -> v }
-          .groupByKey()
-          .map { case (g, l) => GeneCounts(g, l.size) }
-          .toDS()
-
-      val outputFile = new File(cmdArgs.outputDir, "aggregation")
-      j.write.csv(outputFile.getAbsolutePath)
+        .cache()
     }
+  }
+
+  /** Aggregate on families and genes (or other features inside the bed file) */
+  def createAggregateFamilies(aggregateRegion: Dataset[Region],
+                              variants: Dataset[Variant],
+                              broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[GeneFamilyCounts] = {
+    import sparkSession.implicits._
+    aggregateRegion
+      .joinWith(
+        variants,
+        aggregateRegion("contig") === variants("contig") && aggregateRegion(
+          "start") <= variants("pos") && aggregateRegion("end") >= variants(
+          "pos"))
+      .rdd
+      .map {
+        case (r: Region, v) => r.name -> v.passedFamilies(broadcasts.value)
+      }
+      .groupByKey()
+      .map {
+        case (gene, passed) =>
+          // This counting gene per family into a Array[Int]
+          val start = Array.fill(broadcasts.value.pedigree.families.length)(0L)
+          GeneFamilyCounts(
+            gene,
+            passed.foldLeft(start) {
+              case (result, families) =>
+                result.zip(families).map {
+                  case (counts, bool) => if (bool) counts + 1 else counts
+                }
+            }
+          )
+      }
+      .toDS()
+  }
+
+  /** Aggregate on genes (or other features inside the bed file) */
+  def aggregateTotal(aggregateRegion: Dataset[Region],
+                     variants: Dataset[Variant])(
+      implicit sparkSession: SparkSession): Dataset[GeneCounts] = {
+    import sparkSession.implicits._
+    aggregateRegion
+      .joinWith(
+        variants,
+        aggregateRegion("contig") === variants("contig") && aggregateRegion(
+          "start") <= variants("pos") && aggregateRegion("end") >= variants(
+          "pos"))
+      .rdd
+      .map { case (r, v) => r.name -> v }
+      .groupByKey()
+      .map { case (g, l) => GeneCounts(g, l.size) }
+      .toDS()
   }
 
   def checkExistsOutput(outputDir: File): Unit = {
@@ -133,6 +200,7 @@ object DigenicSearch extends ToolCommand[Args] {
             s"Output file already exists: ${outputVariants(outputDir)}")
   }
 
+  /** Writing a stats file */
   def writeStatsFile(outputDir: File,
                      singleFilterTotal: Long,
                      totalPairs: Long): Unit = {
@@ -144,6 +212,8 @@ object DigenicSearch extends ToolCommand[Args] {
   }
 
   case class Temp(v1: Variant, i2: Int)
+
+  /** Created all posible combinations of variants */
   def createVariantCombinations(variants: Dataset[Variant],
                                 regionsRdd: Dataset[IndexedRegions],
                                 broadcasts: Broadcast[Broadcasts])(
@@ -172,6 +242,7 @@ object DigenicSearch extends ToolCommand[Args] {
       }
   }
 
+  /** Filter combinations */
   def filterVariantCombinations(combinations: Dataset[VariantCombination],
                                 broadcasts: Broadcast[Broadcasts])(
       implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
@@ -184,6 +255,7 @@ object DigenicSearch extends ToolCommand[Args] {
       .flatMap(_.filterExternalPair(broadcasts.value))
   }
 
+  /** This reads all regions and makes a [[Variant]] dataset */
   def variantsDataSet(regionsRdd: Dataset[IndexedRegions],
                       broadcasts: Broadcast[Broadcasts])(
       implicit sparkSession: SparkSession): Dataset[Variant] = {

@@ -24,4 +24,6 @@ package nl.biopet.tools.digenicsearch
 case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
                             pairAffectedFraction: Double = 1.0,
                             singleUnaffectedFraction: Double = 0,
-                            pairUnaffectedFraction: Double = 0)
+                            pairUnaffectedFraction: Double = 0,
+                            singleFamilyAffectedFraction: Double = 1.0,
+                            singleFamilyUnaffectedFraction: Double = 0)

@@ -27,12 +27,30 @@ import nl.biopet.utils.ngs.ped.{PedigreeFile, PedigreeSample, Phenotype}
 
 case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
   val pedArray: Array[PedigreeSample] = samples.flatMap(pedFile.samples.get)
+
   val affectedArray: Array[Int] = pedArray.zipWithIndex
     .filter { case (p, _) => p.phenotype == Phenotype.Affected }
     .map { case (_, idx) => idx }
   val unaffectedArray: Array[Int] = pedArray.zipWithIndex
     .filter { case (p, _) => p.phenotype == Phenotype.Unaffected }
     .map { case (_, idx) => idx }
+  val families: Array[String] = pedFile.groupByFamilies.keys.toArray
+  val familiesAffected: Array[Array[Int]] = {
+    val map = pedFile.groupByFamilies
+    families.map { fam =>
+      map(fam).flatMap { sample =>
+        affectedArray.find(_ == samples.indexOf(sample.sampleId))
+      }.toArray
+    }
+  }
+  val familiesUnaffected: Array[Array[Int]] = {
+    val map = pedFile.groupByFamilies
+    families.map { fam =>
+      map(fam).flatMap { sample =>
+        unaffectedArray.find(_ == samples.indexOf(sample.sampleId))
+      }.toArray
+    }
+  }
 }
 
 object PedigreeFileArray {
