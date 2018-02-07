@@ -1,7 +1,8 @@
 # DigenicSearch
 
 
-jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+This will will search for a combination of variants within a multi sample vcf file.
+The tool can filter on INFO fields and a maximum distance of the snps on the reference.
     
 
 # Documentation

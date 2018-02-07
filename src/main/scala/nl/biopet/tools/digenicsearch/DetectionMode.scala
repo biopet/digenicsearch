@@ -21,23 +21,38 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
+import scala.language.implicitConversions
 
-case class Args(inputFiles: List[File] = Nil,
-                outputDir: File = null,
-                reference: File = null,
-                regions: Option[File] = None,
-                aggregation: Option[File] = None,
-                pedFiles: List[File] = Nil,
-                externalFiles: Map[String, File] = Map(),
-                singleExternalFilters: List[AnnotationFilter] = Nil,
-                pairExternalFilters: List[AnnotationFilter] = Nil,
-                detectionMode: DetectionMode.Value = DetectionMode.Varant,
-                singleAnnotationFilter: List[AnnotationFilter] = Nil,
-                pairAnnotationFilter: List[AnnotationFilter] = Nil,
-                fractions: FractionsCutoffs = FractionsCutoffs(),
-                usingOtherFamilies: Boolean = false,
-                maxDistance: Option[Long] = None,
-                binSize: Int = 1000000,
-                maxContigsInSingleJob: Int = 250,
-                sparkMaster: Option[String] = None)
+object DetectionMode extends Enumeration {
+  case class DetectionResult(result: List[(List[Short], List[Boolean])])
+
+  protected case class Val(method: List[Genotype] => DetectionResult)
+      extends super.Val
+  implicit def valueToVal(x: Value): Val = x.asInstanceOf[Val]
+
+  /** In this mode a alternative allele should exist but get collapsed into 1 call */
+  val Varant = Val { alleles =>
+    DetectionResult(List(Nil -> alleles.map(genotype =>
+      !genotype.isReference && !genotype.isNoCall)))
+  }
+
+  /** In this mode a alternative allele should exist */
+  val Allele = Val { alleles =>
+    DetectionResult(
+      alleles.flatMap(_.alleles).filter(_ > 0).distinct.map { key =>
+        List(key) -> alleles.map(_.alleles.contains(key))
+      })
+  }
+
+  /** In this mode the genotype should be exactly the same */
+  val Genotype = Val { alleles =>
+    DetectionResult(
+      alleles
+        .filter(genotype => !genotype.isReference && !genotype.isNoCall)
+        .map(_.alleles)
+        .distinct
+        .map { g =>
+          g -> alleles.map(_.alleles == g)
+        })
+  }
+}

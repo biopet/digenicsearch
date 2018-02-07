@@ -21,29 +21,20 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
+import java.io.{File, PrintWriter}
 
-import htsjdk.variant.variantcontext.{Allele, VariantContext}
+import htsjdk.samtools.SAMSequenceDictionary
 import htsjdk.variant.vcf.VCFFileReader
-import nl.biopet.utils.ngs.fasta
-import nl.biopet.utils.ngs.intervals.{BedRecord, BedRecordList}
-import nl.biopet.utils.spark
-import nl.biopet.utils.ngs.vcf
+import nl.biopet.utils.ngs.intervals.BedRecordList
 import nl.biopet.utils.tool.ToolCommand
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.api.java.function.FilterFunction
+import nl.biopet.utils.conversions.mapToYamlFile
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SQLContext, SparkSession}
+import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.SparkConf
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
-//import org.bdgenomics.adam.models.{ReferenceRegion, SequenceDictionary}
-//import org.bdgenomics.adam.rdd.ADAMContext._
-
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-
-import scala.collection.JavaConversions._
 
 object DigenicSearch extends ToolCommand[Args] {
   def emptyArgs = Args()
@@ -51,181 +42,314 @@ object DigenicSearch extends ToolCommand[Args] {
 
   def main(args: Array[String]): Unit = {
     val cmdArgs = cmdArrayToArgs(args)
+    checkExistsOutput(cmdArgs.outputDir)
 
     logger.info("Start")
-//    val sparkConf: SparkConf = spark.getConf(toolName, cmdArgs.sparkMaster, cmdArgs.sparkConfigValues)
-    val sparkConf: SparkConf = new SparkConf(true)
-    val sparkSession = SparkSession.builder().config(sparkConf).getOrCreate()
+    val sparkConf: SparkConf =
+      new SparkConf(true).setMaster(cmdArgs.sparkMaster.getOrElse("local[1]"))
+    implicit val sparkSession: SparkSession =
+      SparkSession.builder().config(sparkConf).getOrCreate()
     import sparkSession.implicits._
-    implicit val sc: SparkContext = sparkSession.sparkContext
-    println(s"Context is up, see ${sc.uiWebUrl.getOrElse("")}")
+    logger.info(
+      s"Context is up, see ${sparkSession.sparkContext.uiWebUrl.getOrElse("")}")
 
-    val samples =
-      sc.broadcast(cmdArgs.inputFiles.flatMap(vcf.getSampleIds).toArray)
-    require(samples.value.lengthCompare(samples.value.distinct.length) == 0,
-            "Duplicated samples detected")
+    val broadcasts =
+      sparkSession.sparkContext.broadcast(Broadcasts.fromArgs(cmdArgs))
+    logger.info("Broadcasting done")
 
-//    val dict = SequenceDictionary.fromSAMSequenceDictionary(fasta.getCachedDict(cmdArgs.reference))
-
-    val annotations: Broadcast[Set[String]] = sc.broadcast(
-      cmdArgs.singleAnnotationFilter
-        .map(_._1)
-        .toSet ++ cmdArgs.pairAnnotationFilter.map(_._1).toSet)
-
-    val singleFilters = sc.broadcast(cmdArgs.singleAnnotationFilter)
-    val pairFilters = sc.broadcast(cmdArgs.pairAnnotationFilter)
-    val inputFiles = sc.broadcast(cmdArgs.inputFiles)
-    val regions = generateRegions(cmdArgs).toArray
-    val regionsRdd = sc.parallelize(regions, regions.size)
-    val blablabla = regions.zipWithIndex
-      .map(
-        r =>
-          r._2 -> sc
-            .parallelize(Seq(r._1), 1)
-            .mapPartitions { it =>
-              val readers = inputFiles.value.map(new VCFFileReader(_))
-              it.map { region =>
-                loadRegion(readers, region, samples, annotations).toList
-              }
-            }
-            .cache())
-      .toMap
-
-    val futures2: Seq[Future[Long]] =
-      for (i <- 0 to regions.length; j <- i to regions.length) yield {
-        val rdd = blablabla(i).union(blablabla(j)).repartition(1)
-        rdd
-          .mapPartitions { bla =>
-            val list1 = bla.next()
-            val list2 = bla.next()
-            for (v1 <- list1.toIterator; v2 <- list2) yield {
-              (v1, v2)
-            }
-          //Iterator(bla.size)
-          }
-          .countAsync()
-      }
-
-    println(Await.result(Future.sequence(futures2), Duration.Inf).sum)
-
-    sys.exit()
-
-    val variants = regionsRdd.mapPartitions { it =>
-      val readers = inputFiles.value.map(new VCFFileReader(_))
-      it.flatMap { region =>
-        loadRegion(readers, region, samples, annotations)
-      }
-    }
-    val singleFilter = variants
-      .filter { v =>
-        singleFilters.value.isEmpty ||
-        singleFilters.value.forall { c =>
-          v.annotations.find(_._1 == c._1).get._2.forall(c._2)
-        }
-      }
-      .repartition(250)
-
-    val idxVariant = singleFilter
-      .mapPartitionsWithIndex {
-        case (idx, it) =>
-          Iterator(VariantList(idx, it.toArray))
-      }
-      .toDS()
+    val regions = regionsDataset(broadcasts)
+    val aggregateRegions =
+      createAggregateRegions(cmdArgs.aggregation, broadcasts.value.dict)
+    val variants = variantsDataSet(regions, broadcasts)
+      .filter(x => singleAnnotationFilter(x, broadcasts.value))
+      .flatMap(x => x.filterExternalFractions(broadcasts.value))
       .cache()
+    val variantsFamilyFiltered =
+      variants.flatMap(x => x.filterFamilyFractions(broadcasts.value)).cache()
+    val aggregateFamilies = aggregateRegions.map(
+      createAggregateFamilies(_, variantsFamilyFiltered, broadcasts))
 
-    val futures: Seq[Future[Long]] = for (i <- 1 until 250; j <- i until 250)
-      yield {
-        val v1 = idxVariant.filter(idxVariant("idx") === i)
-        val v2 = idxVariant.filter(idxVariant("idx") === j)
+    val familyFuture = aggregateFamilies.flatMap { counts =>
+      Some(counts.rdd.sortBy(_.gene).collectAsync().map { data =>
+        val writer = new PrintWriter(outputFamilyGenes(cmdArgs.outputDir))
+        writer.println(
+          "gene\t" + broadcasts.value.pedigree.families.mkString("\t"))
+        data.foreach(x =>
+          writer.println(x.gene + "\t" + x.count.mkString("\t")))
+        writer.close()
+      })
+    }
 
-        val rdd = v1.union(v2).repartition(1)
-        rdd
-          .mapPartitions { bla =>
-            val list1 = bla.next()
-            val list2 = bla.next()
-            for (v1 <- list1.variants.toIterator; v2 <- list2.variants) yield {
-              (v1, v2)
-            }
-          //Iterator(bla.size)
-          }
-          .rdd
-          .countAsync()
-//      println(count)
-//      Future(count)
-//      rdd.map { case (v1, v2) =>
-//        (for (r1 <- v1.variants; r2 <- v2.variants if r1.contig != r2.contig || r1.pos < r2.pos) yield {
-//
-//        }).length.toLong
-//      }.countAsync()
-      }
+    val variantsAllFiltered =
+      variants.flatMap(x => x.filterSingleFraction(broadcasts.value)).cache()
+    val singleFilterTotal = variantsAllFiltered.rdd.countAsync()
 
-    val bla = Await.result(Future.sequence(futures), Duration.Inf).sum
+    val combinations =
+      createVariantCombinations(variantsAllFiltered, regions, broadcasts)
 
-//    val bla = idxDs.joinWith(idxVariant, idxVariant("idx") === idxDs("i"))
-//      .map(x => IdxWithVariant(x._1.i, x._1.j, x._2))
-//    val bla2 = bla.joinWith(idxVariant2, idxVariant2("idx") === bla("j"))
-//
-//    val bla3 = bla2.flatMap { case (list1, list2) =>
-//      for {
-//        v1 <- list1.v1.variants
-//        v2 <- list2.variants
-//        if v1.contig != v2.contig || v1.pos < v2.pos
-//      } yield (v1, v2)
-//    }
-//    val ds = singleFilter.toDS().cache()
-//    println(bla3.count())
+    val combinationFilter =
+      filterVariantCombinations(combinations, broadcasts)
+        .map(_.cleanResults)
+        .map(_.toResultLine(broadcasts.value))
+        .cache()
 
-    Thread.sleep(1000000)
-    sc.stop()
+    combinationFilter.write.csv(outputPairs(cmdArgs.outputDir).getAbsolutePath)
+    writeStatsFile(cmdArgs.outputDir,
+                   Await.result(singleFilterTotal, Duration.Inf),
+                   combinationFilter.count())
+    aggregateRegions.foreach(
+      aggregateTotal(_, variants).write
+        .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))
+    variantsAllFiltered
+      .map(_.toCsv(broadcasts.value))
+      .write
+      .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
+    familyFuture.foreach(Await.result(_, Duration.Inf))
 
+    sparkSession.stop()
     logger.info("Done")
   }
 
-  def loadRegion(
-      inputReaders: List[VCFFileReader],
-      region: Region,
-      samples: Broadcast[Array[String]],
-      annotationsFields: Broadcast[Set[String]]): Iterator[Variant] = {
-    val bedRecord = BedRecord(region.contig, region.start, region.end)
-    new Iterator[Variant] {
-      protected val iterators: List[BufferedIterator[VariantContext]] =
-        inputReaders.map(vcf.loadRegion(_, bedRecord)).map(_.buffered)
+  /** Create regions as dataset */
+  def regionsDataset(broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[IndexedRegions] = {
+    import sparkSession.implicits._
+    sparkSession.sparkContext
+      .parallelize(broadcasts.value.regions.zipWithIndex.map {
+        case (list, idx) => IndexedRegions(idx, list)
+      }, broadcasts.value.regions.length)
+      .toDS()
+  }
 
-      def hasNext: Boolean = iterators.exists(_.hasNext)
+  def outputFamilyGenes(outputDir: File): File =
+    new File(outputDir, "familyGenes.tsv")
+  def outputAggregation(outputDir: File): File =
+    new File(outputDir, "aggregation")
+  def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
+  def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
-      def next(): Variant = {
-        val position = iterators.filter(_.hasNext).map(_.head.getStart).min
-        val records = iterators
-          .filter(_.hasNext)
-          .filter(_.head.getStart == position)
-          .map(_.next())
-        val allAlleles = records.flatMap(_.getAlleles)
-        val refAlleles = allAlleles.filter(_.isReference)
-        val annotations = annotationsFields.value.map { field =>
-          field -> records.flatMap { record =>
-            if (record.hasAttribute(field))
-              Some(record.getAttributeAsDouble(field, 0.0))
-            else None
-          }.toArray
-        }.toArray
-        val alleles: Array[String] = if (refAlleles.length > 1) {
-          throw new UnsupportedOperationException(
-            "Multiple reference alleles found")
-        } else allAlleles.map(_.toString).toArray
-        val genotypes = samples.value.map { sampleId =>
-          val bla = records.flatMap(x => Option(x.getGenotype(sampleId)))
-          val g = bla.head.getAlleles
-            .map(x => alleles.indexOf(x.toString).toShort)
-            .toArray
-          Genotype(g, bla.head.getDP, bla.head.getDP)
-        }
-        Variant(bedRecord.chr, position, alleles, genotypes, annotations)
+  /** Create aggregate regions as dataset if this is given on the commandline */
+  def createAggregateRegions(aggregationFile: Option[File],
+                             dict: SAMSequenceDictionary)(
+      implicit sparkSession: SparkSession): Option[Dataset[Region]] = {
+    import sparkSession.implicits._
+    aggregationFile.map { file =>
+      sparkSession.sparkContext
+        .parallelize(Region.fromBedFile(file, dict))
+        .toDS()
+        .cache()
+    }
+  }
+
+  /** Aggregate on families and genes (or other features inside the bed file) */
+  def createAggregateFamilies(aggregateRegion: Dataset[Region],
+                              variants: Dataset[Variant],
+                              broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[GeneFamilyCounts] = {
+    import sparkSession.implicits._
+    aggregateRegion
+      .joinWith(
+        variants,
+        aggregateRegion("contig") === variants("contig") && aggregateRegion(
+          "start") <= variants("pos") && aggregateRegion("end") >= variants(
+          "pos"))
+      .rdd
+      .map {
+        case (r: Region, v) => r.name -> v.passedFamilies(broadcasts.value)
       }
+      .groupByKey()
+      .map {
+        case (gene, passed) =>
+          // This counting gene per family into a Array[Int]
+          val start = Array.fill(broadcasts.value.pedigree.families.length)(0L)
+          GeneFamilyCounts(
+            gene,
+            passed.foldLeft(start) {
+              case (result, families) =>
+                result.zip(families).map {
+                  case (counts, bool) => if (bool) counts + 1 else counts
+                }
+            }
+          )
+      }
+      .toDS()
+  }
+
+  /** Aggregate on genes (or other features inside the bed file) */
+  def aggregateTotal(aggregateRegion: Dataset[Region],
+                     variants: Dataset[Variant])(
+      implicit sparkSession: SparkSession): Dataset[GeneCounts] = {
+    import sparkSession.implicits._
+    aggregateRegion
+      .joinWith(
+        variants,
+        aggregateRegion("contig") === variants("contig") && aggregateRegion(
+          "start") <= variants("pos") && aggregateRegion("end") >= variants(
+          "pos"))
+      .rdd
+      .map { case (r, v) => r.name -> v }
+      .groupByKey()
+      .map { case (g, l) => GeneCounts(g, l.size) }
+      .toDS()
+  }
+
+  def checkExistsOutput(outputDir: File): Unit = {
+    require(!outputPairs(outputDir).exists(),
+            s"Output file already exists: ${outputPairs(outputDir)}")
+    require(!outputVariants(outputDir).exists(),
+            s"Output file already exists: ${outputVariants(outputDir)}")
+  }
+
+  /** Writing a stats file */
+  def writeStatsFile(outputDir: File,
+                     singleFilterTotal: Long,
+                     totalPairs: Long): Unit = {
+    mapToYamlFile(Map(
+                    "total_pairs" -> totalPairs,
+                    "single_filter_total" -> singleFilterTotal
+                  ),
+                  new File(outputDir, "stats.yml"))
+  }
+
+  case class Temp(v1: Variant, i2: Int)
+
+  /** Created all posible combinations of variants */
+  def createVariantCombinations(variants: Dataset[Variant],
+                                regionsRdd: Dataset[IndexedRegions],
+                                broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+    import sparkSession.implicits._
+
+    val indexCombination = createCombinations(regionsRdd, broadcasts)
+
+    val single = indexCombination
+      .joinWith(variants, variants("regionsIdx") === indexCombination("i1"))
+      .map {
+        case (c, v1) =>
+          Temp(v1, c.i2)
+      }
+    single
+      .joinWith(variants, variants("regionsIdx") === single("i2"))
+      .flatMap {
+        case (t, v2) =>
+          val v1 = t.v1
+          if (v1.contig > v2.contig || v1.pos < v2.pos)
+            Some(
+              VariantCombination(v1,
+                                 v2,
+                                 Variant.alleleCombinations(v1, v2).toList))
+          else None
+      }
+  }
+
+  /** Filter combinations */
+  def filterVariantCombinations(combinations: Dataset[VariantCombination],
+                                broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+    import sparkSession.implicits._
+
+    combinations
+      .filter(x => distanceFilter(x.v1, x.v2, broadcasts.value.maxDistance))
+      .filter(pairedFilter(_, broadcasts.value.pairFilters))
+      .flatMap(_.filterPairFraction(broadcasts.value))
+      .flatMap(_.filterExternalPair(broadcasts.value))
+  }
+
+  /** This reads all regions and makes a [[Variant]] dataset */
+  def variantsDataSet(regionsRdd: Dataset[IndexedRegions],
+                      broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[Variant] = {
+    import sparkSession.implicits._
+    regionsRdd
+      .mapPartitions { it =>
+        val readers = broadcasts.value.inputFiles.map(new VCFFileReader(_))
+        val externalReaders =
+          broadcasts.value.externalFiles.map(new VCFFileReader(_))
+        it.flatMap { r =>
+          r.regions.flatMap(
+            new LoadRegion(readers,
+                           externalReaders,
+                           _,
+                           r.idx,
+                           broadcasts.value))
+        }
+      }
+  }
+
+  /** This filters if 1 of the 2 variants returns true */
+  def pairedFilter(combination: VariantCombination,
+                   pairFilters: List[AnnotationFilter]): Boolean = {
+    val list = List(combination.v1, combination.v2)
+    pairFilters.isEmpty ||
+    pairFilters.forall { c =>
+      list.exists(
+        v =>
+          v.annotations
+            .find(_.key == c.key)
+            .toList
+            .flatMap(_.value)
+            .forall(c.method))
+    }
+  }
+
+  /** This created a list of combinations rdds */
+  def createCombinations(regionsRdd: Dataset[IndexedRegions],
+                         broadcasts: Broadcast[Broadcasts])(
+      implicit sparkSession: SparkSession): Dataset[Combination] = {
+    import sparkSession.implicits._
+    regionsRdd.flatMap { r =>
+      for (i <- r.idx until broadcasts.value.regions.length
+           if distanceFilter(r.regions,
+                             broadcasts.value.regions(i),
+                             broadcasts.value.maxDistance)) yield {
+        Combination(r.idx, i)
+      }
+    }
+  }
+
+  /** This filters region combinations when maxDistance is set */
+  def distanceFilter(list1: List[Region],
+                     list2: List[Region],
+                     maxDistance: Option[Long]): Boolean = {
+    maxDistance match {
+      case Some(distance) =>
+        list1.exists(r1 =>
+          list2.exists(r2 =>
+            r1.distance(r2) match {
+              case Some(x) => x <= distance
+              case _ => false
+          }))
+      case _ => true
+    }
+  }
+
+  /** This returns false is the variants are to far a way */
+  def distanceFilter(v1: Variant,
+                     v2: Variant,
+                     maxDistance: Option[Long]): Boolean = {
+    maxDistance match {
+      case Some(_) if v1.contig != v2.contig => false
+      case Some(distance) => (v1.pos - v2.pos).abs <= distance
+      case _ => true
+    }
+  }
+
+  /** This filters by looking only at a single variants,
+    * this reduces the number of combinations, this step is only there to improve performance */
+  def singleAnnotationFilter(v: Variant, broadcasts: Broadcasts): Boolean = {
+    broadcasts.singleFilters.isEmpty ||
+    broadcasts.singleFilters.forall { c =>
+      v.annotations
+        .find(_.key == c.key)
+        .toList
+        .flatMap(_.value)
+        .forall(c.method)
     }
   }
 
   /** creates regions to analyse */
-  def generateRegions(cmdArgs: Args): List[Region] = {
+  def generateRegions(cmdArgs: Args,
+                      dict: SAMSequenceDictionary): List[List[Region]] = {
     val regions = (cmdArgs.regions match {
       case Some(i) =>
         BedRecordList.fromFile(i).validateContigs(cmdArgs.reference)
@@ -233,22 +357,45 @@ object DigenicSearch extends ToolCommand[Args] {
     }).combineOverlap
       .scatter(cmdArgs.binSize,
                maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
-      .flatten
-    regions.map(x => Region(x.chr, x.start, x.end))
+    regions.map(x =>
+      x.map(y => Region(dict.getSequenceIndex(y.chr), y.start, y.end)))
   }
 
   def descriptionText: String =
     """
-      |jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+      |This will will search for a combination of variants within a multi sample vcf file.
+      |The tool can filter on INFO fields and a maximum distance of the snps on the reference.
     """.stripMargin
 
   def manualText: String =
     """
-      |jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+      |Because of the number of possible combination this tool requires to run on a spark cluster.
+      |If required the tool can still run local by submitting the tool to a local master, see also https://spark.apache.org/docs/latest/submitting-applications.html#master-urls
+      |By default this tool runs on the complete genome but with the option --regions a bed file can be provided to limit the number of locations
     """.stripMargin
 
   def exampleText: String =
-    """
-      |jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd jfhgkjsdhgkjshdfjkvbsjkldvksdfkvjsd bjksbfkg bkdfb kbsfdkjg bdf sjhsdfb sbdj gbsfd
+    s"""
+      |A default run:
+      |${example("-i",
+                 "<input vcf>",
+                 "-o",
+                 "<output dir>",
+                 "-R",
+                 "<reference fasta>",
+                 "-p",
+                 "<ped file")}
+      |
+      |A run on limited locations:
+      |${example("-i",
+                 "<input vcf>",
+                 "-o",
+                 "<output dir>",
+                 "-R",
+                 "<reference fasta>",
+                 "--regions",
+                 "<bed file>",
+                 "-p",
+                 "<ped file")}
     """.stripMargin
 }

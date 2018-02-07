@@ -21,23 +21,9 @@
 
 package nl.biopet.tools.digenicsearch
 
-import java.io.File
-
-case class Args(inputFiles: List[File] = Nil,
-                outputDir: File = null,
-                reference: File = null,
-                regions: Option[File] = None,
-                aggregation: Option[File] = None,
-                pedFiles: List[File] = Nil,
-                externalFiles: Map[String, File] = Map(),
-                singleExternalFilters: List[AnnotationFilter] = Nil,
-                pairExternalFilters: List[AnnotationFilter] = Nil,
-                detectionMode: DetectionMode.Value = DetectionMode.Varant,
-                singleAnnotationFilter: List[AnnotationFilter] = Nil,
-                pairAnnotationFilter: List[AnnotationFilter] = Nil,
-                fractions: FractionsCutoffs = FractionsCutoffs(),
-                usingOtherFamilies: Boolean = false,
-                maxDistance: Option[Long] = None,
-                binSize: Int = 1000000,
-                maxContigsInSingleJob: Int = 250,
-                sparkMaster: Option[String] = None)
+case class FractionsCutoffs(singleAffectedFraction: Double = 1.0,
+                            pairAffectedFraction: Double = 1.0,
+                            singleUnaffectedFraction: Double = 0,
+                            pairUnaffectedFraction: Double = 0,
+                            singleFamilyAffectedFraction: Double = 1.0,
+                            singleFamilyUnaffectedFraction: Double = 0)

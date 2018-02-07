@@ -22,20 +22,46 @@
 package nl.biopet.tools
 
 package object digenicsearch {
-  case class Region(contig: String, start: Int, end: Int)
 
-  case class Variant(contig: String,
-                     pos: Int,
-                     alleles: Array[String],
-                     genotypes: Array[Genotype],
-                     annotations: Array[(String, Array[Double])] = Array())
+  case class AnnotationFilter(key: String, method: Double => Boolean)
+  case class ExternalFilter(key: String, id: Int, method: Double => Boolean)
 
-  case class Genotype(alleles: Array[Short], dp: Int, gq: Int)
+  case class AnnotationValue(key: String, value: List[Double])
 
-  case class VariantList(idx: Int, variants: Array[Variant])
+  case class Combination(i1: Int, i2: Int)
+  case class IndexedRegions(idx: Int, regions: List[Region])
 
-  case class Idx(i: Int, j: Int)
-  case class IdxWithVariant(i: Int, j: Int, v1: VariantList)
-  case class IdxWithVariants(i: Int, j: Int, v1: VariantList, v2: VariantList)
+  case class Genotype(alleles: List[Short]) {
+    def isReference: Boolean = alleles.forall(_ == 0)
+    def isNoCall: Boolean = alleles.forall(_ < 0)
+  }
+
+  case class GenotypeAnnotation(dp: Int, gq: Int)
+
+  case class PedigreeFraction(affected: Double, unaffected: Double)
+
+  case class AlleleCombination(a1: List[Short], a2: List[Short]) {
+    override def toString: String = {
+      def alleleToString(a: List[Short]) =
+        if (a.nonEmpty) a.mkString("/") else "v"
+      s"(${alleleToString(a1)},${alleleToString(a2)})"
+    }
+  }
+
+  case class GeneCounts(gene: String, count: Long)
+  case class GeneFamilyCounts(gene: String, count: Array[Long])
+
+  case class VariantCsv(contig: String,
+                        pos: Int,
+                        alleles: String,
+                        pedigreeFractions: String,
+                        externalFractions: String)
+
+  case class ResultLineCsv(contig1: String,
+                           pos1: Int,
+                           contig2: String,
+                           pos2: Int,
+                           affectedFractions: String,
+                           externalFractions: String)
 
 }

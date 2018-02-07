@@ -28,28 +28,14 @@ import nl.biopet.utils.tool.{AbstractOptParser, ToolCommand}
 class ArgsParser(toolCommand: ToolCommand[Args])
     extends AbstractOptParser[Args](toolCommand) {
 
-  def parseAnnotationFilter(arg: String): (String, Double => Boolean) = {
-    if (arg.contains(">=")) {
-      val split = arg.split(">=", 2)
-      (split(0), _ >= split(1).toDouble)
-    } else if (arg.contains("<=")) {
-      val split = arg.split("<=", 2)
-      (split(0), _ <= split(1).toDouble)
-    } else
-      throw new IllegalArgumentException(
-        "No method found, possible methods: >=, <=")
-  }
-
-  opt[File]("inputFile")
-    .abbr("i")
-    .unbounded()
+  opt[File]('i', "inputFile")
     .required()
     .action((x, c) => c.copy(inputFiles = x :: c.inputFiles))
     .text("Input vcf files")
   opt[File]('o', "outputDir")
     .required()
     .action((x, c) => c.copy(outputDir = x))
-    .text("Outputdir for the tool")
+    .text("Output dir for the tool")
   opt[File]('R', "reference")
     .required()
     .action((x, c) => c.copy(reference = x))
@@ -57,37 +43,134 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[File]("regions")
     .action((x, c) => c.copy(regions = Some(x)))
     .text("Only using this regions in the bed file")
+  opt[File]("aggregation")
+    .action((x, c) => c.copy(aggregation = Some(x)))
+    .text("Only using this aggregation in the bed file, the 4th column is used for aggregation")
   opt[File]('p', "pedFile")
-    .action((x, c) => c.copy(pedFile = Some(x)))
+    .required()
+    .unbounded()
+    .action((x, c) => c.copy(pedFiles = x :: c.pedFiles))
     .text("Input ped file for family relations and effected/non-effected")
+  opt[Unit]("usingOtherFamilies")
+    .action((_, c) => c.copy(usingOtherFamilies = true))
+    .text(
+      "This option uses affected members from other families to " +
+        "check if the variant is correlated to the trait. " +
+        "If the variant in the other family is above the treshold fraction, " +
+        "then it is likely to be related to the trait. " +
+        "If the fraction of the variant is 0.0 in the members of " +
+        "the affected family then it is still possible it is related to the trait. " +
+        "If the fraction of the variant is between 0.0 and the threshold fraction, " +
+        "then the variant is probably not related to the trait and is filtered out.")
+  opt[String]("detectionMode")
+    .action(
+      (x, c) =>
+        c.copy(
+          detectionMode = DetectionMode.values
+            .find(_.toString.toLowerCase == x.toLowerCase)
+            .getOrElse(throw new IllegalArgumentException(
+              s"Value '$x' not allowed, possible values: ${DetectionMode.values
+                .mkString(", ")}"))))
+    .text(
+      s"Detection mode, possible values: ${DetectionMode.values.mkString(", ")}")
   opt[String]("singleAnnotationFilter")
+    .unbounded()
     .action {
       case (x, c) =>
         c.copy(
-          singleAnnotationFilter = c.singleAnnotationFilter :+ parseAnnotationFilter(
-            x))
+          singleAnnotationFilter = c.singleAnnotationFilter :+ ArgsParser
+            .parseAnnotationFilter(x))
     }
     .text("Filter on single variant")
   opt[String]("pairAnnotationFilter")
+    .unbounded()
     .action {
       case (x, c) =>
         c.copy(
-          pairAnnotationFilter = c.pairAnnotationFilter :+ parseAnnotationFilter(
-            x))
+          pairAnnotationFilter = c.pairAnnotationFilter :+ ArgsParser
+            .parseAnnotationFilter(x))
     }
     .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
-  opt[Int]("binSize") action { (x, c) =>
-    c.copy(binSize = x)
-  } text "Binsize in estimated base pairs"
-  opt[Int]("maxContigsInSingleJob") action { (x, c) =>
-    c.copy(maxContigsInSingleJob = x)
-  } text s"Max number of bins to be combined, default is 250"
+  opt[Double]("singleAffectedFraction")
+    .action { (x, c) =>
+      c.copy(fractions = c.fractions.copy(singleAffectedFraction = x))
+    }
+    .text("minimal affected fraction for each variant")
+  opt[Double]("pairAffectedFraction")
+    .action { (x, c) =>
+      c.copy(fractions = c.fractions.copy(pairAffectedFraction = x))
+    }
+    .text("minimal affected fraction for for at least 1 of the 2 variants")
+  opt[Double]("singleUnaffectedFraction")
+    .action { (x, c) =>
+      c.copy(fractions = c.fractions.copy(singleUnaffectedFraction = x))
+    }
+    .text("maximum unaffected fraction for for each variant")
+  opt[Double]("pairUnaffectedFraction")
+    .action { (x, c) =>
+      c.copy(fractions = c.fractions.copy(pairUnaffectedFraction = x))
+    }
+    .text("maximum unaffected fraction for for at least 1 of the 2 variants")
+  opt[Long]("maxDistance")
+    .action { (x, c) =>
+      c.copy(maxDistance = Some(x))
+    }
+    .text("maxDistance in base pairs. This option will make the assumption that both variants are on the same contig")
+  opt[Int]("binSize")
+    .action { (x, c) =>
+      c.copy(binSize = x)
+    }
+    .text("Binsize in estimated base pairs")
+  opt[Int]("maxContigsInSingleJob")
+    .unbounded()
+    .action { (x, c) =>
+      c.copy(maxContigsInSingleJob = x)
+    }
+    .text(s"Max number of bins to be combined, default is 250")
+  opt[(String, File)]("externalFile")
+    .unbounded()
+    .action {
+      case ((key, value), c) =>
+        if (c.externalFiles.contains(key))
+          throw new IllegalArgumentException(s"Key '$key' already exist")
+        c.copy(externalFiles = c.externalFiles ++ Map(key -> value))
+    }
+    .text(s"External file used for filtering")
+  opt[String]("singleExternalFilter")
+    .unbounded()
+    .action {
+      case (x, c) =>
+        c.copy(
+          singleExternalFilters = c.singleExternalFilters :+ ArgsParser
+            .parseAnnotationFilter(x))
+    }
+    .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
+  opt[String]("pairExternalFilter")
+    .unbounded()
+    .action {
+      case (x, c) =>
+        c.copy(
+          pairExternalFilters = c.pairExternalFilters :+ ArgsParser
+            .parseAnnotationFilter(x))
+    }
+    .text("Filter on paired variant, must be true for 1 of the 2 in the pair")
   opt[String]("sparkMaster")
     .action((x, c) => c.copy(sparkMaster = Some(x)))
     .text("Spark master, default to local[1]")
-  opt[(String, String)]("sparkConfigValue")
-    .unbounded()
-    .action((x, c) =>
-      c.copy(sparkConfigValues = c.sparkConfigValues + (x._1 -> x._2)))
-    .text(s"Add values to the spark config")
+}
+
+object ArgsParser {
+  def parseAnnotationFilter(arg: String): AnnotationFilter = {
+    arg match {
+      case a if a.contains(">=") =>
+        val split = arg.split(">=", 2)
+        AnnotationFilter(split(0), _ >= split(1).toDouble)
+      case a if a.contains("<=") =>
+        val split = arg.split("<=", 2)
+        AnnotationFilter(split(0), _ <= split(1).toDouble)
+      case _ =>
+        throw new IllegalArgumentException(
+          "No method found, possible methods: >=, <=")
+    }
+  }
 }
