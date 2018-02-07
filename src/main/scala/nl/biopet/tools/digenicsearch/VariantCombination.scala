@@ -30,6 +30,7 @@ case class VariantCombination(v1: Variant,
     cleanResults(alleles)
   }
 
+  /** This method will remove alleles that are not used anymore in detection result because of filtering */
   def cleanResults(keep: List[AlleleCombination]): VariantCombination = {
     val alleles1 = keep.map(_.a1).toSet
     val alleles2 = keep.map(_.a2).toSet
@@ -54,6 +55,7 @@ case class VariantCombination(v1: Variant,
     this.copy(v1 = newV1, v2 = newV2, alleles = keep)
   }
 
+  /** Returns fractions for each allele combination */
   def pedigreeFractions(
       broadcasts: Broadcasts): Map[AlleleCombination, PedigreeFraction] = {
     val alleles1 = v1.detectionResult.result.toMap
@@ -72,6 +74,7 @@ case class VariantCombination(v1: Variant,
     }.toMap
   }
 
+  /** Filter based on fractions */
   def filterPairFraction(broadcasts: Broadcasts): Option[VariantCombination] = {
 
     val fractions = pedigreeFractions(broadcasts)
@@ -85,6 +88,7 @@ case class VariantCombination(v1: Variant,
     else None
   }
 
+  /** returns external fractions of they exist for each combination */
   def externalFractions(idx: Int): Map[AlleleCombination, Option[Double]] = {
     val alleles1 = this.v1.externalDetectionResult(idx).result.toMap
     val alleles2 = this.v2.externalDetectionResult(idx).result.toMap
@@ -100,6 +104,7 @@ case class VariantCombination(v1: Variant,
     }).toMap
   }
 
+  /** Filter based on external fractions */
   def filterExternalPair(broadcasts: Broadcasts): Option[VariantCombination] = {
 
     broadcasts.externalFiles.zipWithIndex.foldLeft(Option(this)) {
@@ -122,6 +127,7 @@ case class VariantCombination(v1: Variant,
     }
   }
 
+  /** Convert to a result line */
   def toResultLine(broadcasts: Broadcasts): ResultLineCsv = {
     val fractions = pedigreeFractions(broadcasts)
       .map {

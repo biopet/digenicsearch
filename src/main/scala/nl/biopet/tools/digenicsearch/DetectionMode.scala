@@ -30,11 +30,13 @@ object DetectionMode extends Enumeration {
       extends super.Val
   implicit def valueToVal(x: Value): Val = x.asInstanceOf[Val]
 
+  /** In this mode a alternative allele should exist but get collapsed into 1 call */
   val Varant = Val { alleles =>
     DetectionResult(List(Nil -> alleles.map(genotype =>
       !genotype.isReference && !genotype.isNoCall)))
   }
 
+  /** In this mode a alternative allele should exist */
   val Allele = Val { alleles =>
     DetectionResult(
       alleles.flatMap(_.alleles).filter(_ > 0).distinct.map { key =>
@@ -42,6 +44,7 @@ object DetectionMode extends Enumeration {
       })
   }
 
+  /** In this mode the genotype should be exactly the same */
   val Genotype = Val { alleles =>
     DetectionResult(
       alleles
