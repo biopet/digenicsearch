@@ -51,7 +51,7 @@
       </span>
       </h4>
       
-          <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>This stores a variant and genotypes in a compressed format</p></div><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
@@ -342,7 +342,24 @@
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">This will remove filter variants on external fractions set on the commandline</p>
+    </li><li name="nl.biopet.tools.digenicsearch.Variant#filterFamilyFractions" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="filterFamilyFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Option[nl.biopet.tools.digenicsearch.Variant]"></a>
+      <a id="filterFamilyFractions(Broadcasts):Option[Variant]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">filterFamilyFractions</span><span class="params">(<span name="broadcasts">broadcasts: <a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a></span>)</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<a href="" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@filterFamilyFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Option[nl.biopet.tools.digenicsearch.Variant]" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Filter based on family fractions, usingOtherFamilies argument is used here</p>
     </li><li name="nl.biopet.tools.digenicsearch.Variant#filterSingleFraction" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="filterSingleFraction(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Option[nl.biopet.tools.digenicsearch.Variant]"></a>
       <a id="filterSingleFraction(Broadcasts):Option[Variant]"></a>
@@ -359,7 +376,7 @@
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">This will remove filter variants on affected / unaffected fractions set</p>
     </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <a id="finalize():Unit"></a>
@@ -417,6 +434,23 @@
       </a>
     </span>
       
+    </li><li name="nl.biopet.tools.digenicsearch.Variant#getAffectedFractions" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="getAffectedFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Map[List[Short],nl.biopet.tools.digenicsearch.PedigreeFraction]"></a>
+      <a id="getAffectedFractions(Broadcasts):Map[List[Short],PedigreeFraction]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getAffectedFractions</span><span class="params">(<span name="broadcasts">broadcasts: <a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a></span>)</span><span class="result">: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Short">Short</span>], <a href="package$$PedigreeFraction.html" class="extype" name="nl.biopet.tools.digenicsearch.PedigreeFraction">PedigreeFraction</a>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@getAffectedFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Map[List[Short],nl.biopet.tools.digenicsearch.PedigreeFraction]" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Get fractions for the complete input set</p>
     </li><li name="scala.AnyRef#getClass" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <a id="getClass():Class[_]"></a>
@@ -451,23 +485,23 @@
       </a>
     </span>
       
-    </li><li name="nl.biopet.tools.digenicsearch.Variant#getPedigreeFractions" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="getPedigreeFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Map[List[Short],nl.biopet.tools.digenicsearch.PedigreeFraction]"></a>
-      <a id="getPedigreeFractions(Broadcasts):Map[List[Short],PedigreeFraction]"></a>
+    </li><li name="nl.biopet.tools.digenicsearch.Variant#getFamilyFractions" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="getFamilyFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Array[Map[List[Short],nl.biopet.tools.digenicsearch.PedigreeFraction]]"></a>
+      <a id="getFamilyFractions(Broadcasts):Array[Map[List[Short],PedigreeFraction]]"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">getPedigreeFractions</span><span class="params">(<span name="broadcasts">broadcasts: <a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a></span>)</span><span class="result">: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Short">Short</span>], <a href="package$$PedigreeFraction.html" class="extype" name="nl.biopet.tools.digenicsearch.PedigreeFraction">PedigreeFraction</a>]</span>
+        <span class="name">getFamilyFractions</span><span class="params">(<span name="broadcasts">broadcasts: <a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a></span>)</span><span class="result">: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.List">List</span>[<span class="extype" name="scala.Short">Short</span>], <a href="package$$PedigreeFraction.html" class="extype" name="nl.biopet.tools.digenicsearch.PedigreeFraction">PedigreeFraction</a>]]</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@getPedigreeFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Map[List[Short],nl.biopet.tools.digenicsearch.PedigreeFraction]" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@getFamilyFractions(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Array[Map[List[Short],nl.biopet.tools.digenicsearch.PedigreeFraction]]" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Returns all fractions for each family</p>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <a id="isInstanceOf[T0]:Boolean"></a>
@@ -536,6 +570,23 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="nl.biopet.tools.digenicsearch.Variant#passedFamilies" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="passedFamilies(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Array[Boolean]"></a>
+      <a id="passedFamilies(Broadcasts):Array[Boolean]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">passedFamilies</span><span class="params">(<span name="broadcasts">broadcasts: <a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a></span>)</span><span class="result">: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Boolean">Boolean</span>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.Variant@passedFamilies(broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Array[Boolean]" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Returns a array with all families, true if they pass the fractions filters</p>
     </li><li name="nl.biopet.tools.digenicsearch.Variant#pos" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="pos:Int"></a>
       <a id="pos:Int"></a>
@@ -603,7 +654,7 @@
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Convert this to a csv object</p>
     </li><li name="scala.AnyRef#wait" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <a id="wait():Unit"></a>

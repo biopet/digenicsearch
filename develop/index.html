@@ -180,6 +180,12 @@
               <td>Input ped file for family relations and effected/non-effected</td>
             </tr>
             <tr>
+              <td>--usingOtherFamilies</td>
+              <td>no</td>
+              <td>no</td>
+              <td>This option uses affected members from other families to check if the variant is correlated to the trait. If the variant in the other family is above the treshold fraction, then it is likely to be related to the trait. If the fraction of the variant is 0.0 in the members of the affected family then it is still possible it is related to the trait. If the fraction of the variant is between 0.0 and the threshold fraction, then the variant is probably not related to the trait and is filtered out.</td>
+            </tr>
+            <tr>
               <td>--detectionMode</td>
               <td>no</td>
               <td>no</td>

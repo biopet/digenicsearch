@@ -182,23 +182,23 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>ToolCommand</dd></dl></div>
-    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#aggregate" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="aggregate(cmdArgs:nl.biopet.tools.digenicsearch.Args,variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Variant],dict:htsjdk.samtools.SAMSequenceDictionary)(implicitsparkSession:org.apache.spark.sql.SparkSession):Unit"></a>
-      <a id="aggregate(Args,Dataset[Variant],SAMSequenceDictionary)(SparkSession):Unit"></a>
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#aggregateTotal" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="aggregateTotal(aggregateRegion:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Region],variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Variant])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.GeneCounts]"></a>
+      <a id="aggregateTotal(Dataset[Region],Dataset[Variant])(SparkSession):Dataset[GeneCounts]"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">aggregate</span><span class="params">(<span name="cmdArgs">cmdArgs: <a href="Args.html" class="extype" name="nl.biopet.tools.digenicsearch.Args">Args</a></span>, <span name="variants">variants: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a>]</span>, <span name="dict">dict: <span class="extype" name="htsjdk.samtools.SAMSequenceDictionary">SAMSequenceDictionary</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+        <span class="name">aggregateTotal</span><span class="params">(<span name="aggregateRegion">aggregateRegion: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="Region.html" class="extype" name="nl.biopet.tools.digenicsearch.Region">Region</a>]</span>, <span name="variants">variants: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$GeneCounts.html" class="extype" name="nl.biopet.tools.digenicsearch.GeneCounts">GeneCounts</a>]</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@aggregate(cmdArgs:nl.biopet.tools.digenicsearch.Args,variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Variant],dict:htsjdk.samtools.SAMSequenceDictionary)(implicitsparkSession:org.apache.spark.sql.SparkSession):Unit" title="Permalink" target="_top">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@aggregateTotal(aggregateRegion:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Region],variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Variant])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.GeneCounts]" title="Permalink" target="_top">
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Aggregate on genes (or other features inside the bed file)</p>
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#argsParser" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="argsParser:nl.biopet.tools.digenicsearch.ArgsParser"></a>
       <a id="argsParser:ArgsParser"></a>
@@ -324,6 +324,40 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>ToolCommand</dd></dl></div>
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#createAggregateFamilies" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="createAggregateFamilies(aggregateRegion:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Region],variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Variant],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.GeneFamilyCounts]"></a>
+      <a id="createAggregateFamilies(Dataset[Region],Dataset[Variant],Broadcast[Broadcasts])(SparkSession):Dataset[GeneFamilyCounts]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createAggregateFamilies</span><span class="params">(<span name="aggregateRegion">aggregateRegion: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="Region.html" class="extype" name="nl.biopet.tools.digenicsearch.Region">Region</a>]</span>, <span name="variants">variants: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a>]</span>, <span name="broadcasts">broadcasts: <span class="extype" name="org.apache.spark.broadcast.Broadcast">Broadcast</span>[<a href="Broadcasts.html" class="extype" name="nl.biopet.tools.digenicsearch.Broadcasts">Broadcasts</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="package$$GeneFamilyCounts.html" class="extype" name="nl.biopet.tools.digenicsearch.GeneFamilyCounts">GeneFamilyCounts</a>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@createAggregateFamilies(aggregateRegion:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Region],variants:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Variant],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.GeneFamilyCounts]" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Aggregate on families and genes (or other features inside the bed file)</p>
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#createAggregateRegions" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="createAggregateRegions(aggregationFile:Option[java.io.File],dict:htsjdk.samtools.SAMSequenceDictionary)(implicitsparkSession:org.apache.spark.sql.SparkSession):Option[org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Region]]"></a>
+      <a id="createAggregateRegions(Option[File],SAMSequenceDictionary)(SparkSession):Option[Dataset[Region]]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">createAggregateRegions</span><span class="params">(<span name="aggregationFile">aggregationFile: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="java.io.File">File</span>]</span>, <span name="dict">dict: <span class="extype" name="htsjdk.samtools.SAMSequenceDictionary">SAMSequenceDictionary</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sparkSession">sparkSession: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="org.apache.spark.sql.Dataset">Dataset</span>[<a href="Region.html" class="extype" name="nl.biopet.tools.digenicsearch.Region">Region</a>]]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@createAggregateRegions(aggregationFile:Option[java.io.File],dict:htsjdk.samtools.SAMSequenceDictionary)(implicitsparkSession:org.apache.spark.sql.SparkSession):Option[org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Region]]" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Create aggregate regions as dataset if this is given on the commandline</p>
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#createCombinations" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="createCombinations(regionsRdd:org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.IndexedRegions],broadcasts:org.apache.spark.broadcast.Broadcast[nl.biopet.tools.digenicsearch.Broadcasts])(implicitsparkSession:org.apache.spark.sql.SparkSession):org.apache.spark.sql.Dataset[nl.biopet.tools.digenicsearch.Combination]"></a>
       <a id="createCombinations(Dataset[IndexedRegions],Broadcast[Broadcasts])(SparkSession):Dataset[Combination]"></a>
@@ -357,7 +391,7 @@
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Created all posible combinations of variants</p>
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#descriptionText" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="descriptionText:String"></a>
       <a id="descriptionText:String"></a>
@@ -527,7 +561,7 @@
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Filter combinations</p>
     </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <a id="finalize():Unit"></a>
@@ -789,6 +823,40 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#outputAggregation" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="outputAggregation(outputDir:java.io.File):java.io.File"></a>
+      <a id="outputAggregation(File):File"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">outputAggregation</span><span class="params">(<span name="outputDir">outputDir: <span class="extype" name="java.io.File">File</span></span>)</span><span class="result">: <span class="extype" name="java.io.File">File</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@outputAggregation(outputDir:java.io.File):java.io.File" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
+    </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#outputFamilyGenes" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="outputFamilyGenes(outputDir:java.io.File):java.io.File"></a>
+      <a id="outputFamilyGenes(File):File"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">outputFamilyGenes</span><span class="params">(<span name="outputDir">outputDir: <span class="extype" name="java.io.File">File</span></span>)</span><span class="result">: <span class="extype" name="java.io.File">File</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../../../index.html#nl.biopet.tools.digenicsearch.DigenicSearch$@outputFamilyGenes(outputDir:java.io.File):java.io.File" title="Permalink" target="_top">
+        <img src="../../../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#outputPairs" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="outputPairs(outputDir:java.io.File):java.io.File"></a>
       <a id="outputPairs(File):File"></a>
@@ -873,7 +941,7 @@
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Create regions as dataset</p>
     </li><li name="nl.biopet.tools.digenicsearch.DigenicSearch#singleAnnotationFilter" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="singleAnnotationFilter(v:nl.biopet.tools.digenicsearch.Variant,broadcasts:nl.biopet.tools.digenicsearch.Broadcasts):Boolean"></a>
       <a id="singleAnnotationFilter(Variant,Broadcasts):Boolean"></a>
@@ -1010,7 +1078,7 @@ this reduces the number of combinations, this step is only there to improve perf
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">This reads all regions and makes a <a href="Variant.html" class="extype" name="nl.biopet.tools.digenicsearch.Variant">Variant</a> dataset</p>
     </li><li name="scala.AnyRef#wait" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <a id="wait():Unit"></a>
@@ -1096,7 +1164,7 @@ this reduces the number of combinations, this step is only there to improve perf
         <img src="../../../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      
+      <p class="shortcomment cmt">Writing a stats file</p>
     </li></ol>
             </div>
 
