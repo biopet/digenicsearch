@@ -88,9 +88,8 @@ object Broadcasts {
     }
     singleExternalFilters.zip(pairExternalFilters).zipWithIndex.foreach {
       case ((single, pair), idx) =>
-        require(
-          single.nonEmpty || pair.nonEmpty,
-          s"External file is not used in a filter: ${externalFiles(idx)}")
+        require(single.nonEmpty || pair.nonEmpty,
+                s"External file is not used in a filter: ${externalFiles(idx)}")
     }
 
     val dict = fasta.getCachedDict(cmdArgs.reference)

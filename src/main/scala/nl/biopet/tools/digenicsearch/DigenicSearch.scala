@@ -317,7 +317,7 @@ object DigenicSearch extends ToolCommand[Args] {
           list2.exists(r2 =>
             r1.distance(r2) match {
               case Some(x) => x <= distance
-              case _ => false
+              case _       => false
           }))
       case _ => true
     }
@@ -329,8 +329,8 @@ object DigenicSearch extends ToolCommand[Args] {
                      maxDistance: Option[Long]): Boolean = {
     maxDistance match {
       case Some(_) if v1.contig != v2.contig => false
-      case Some(distance) => (v1.pos - v2.pos).abs <= distance
-      case _ => true
+      case Some(distance)                    => (v1.pos - v2.pos).abs <= distance
+      case _                                 => true
     }
   }
 
