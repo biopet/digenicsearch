@@ -24,7 +24,7 @@ package nl.biopet.tools.digenicsearch
 import java.io.File
 
 import htsjdk.samtools.SAMSequenceDictionary
-import nl.biopet.tools.digenicsearch.DigenicSearch.generateRegions
+import nl.biopet.tools.digenicsearch.SparkMethods.generateRegions
 import nl.biopet.utils.ngs.{vcf, fasta}
 
 case class Broadcasts(samples: Array[String],
