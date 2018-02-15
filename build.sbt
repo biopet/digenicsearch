@@ -8,6 +8,8 @@ biopetUrlName := "digenicsearch"
 
 biopetIsTool := true
 
+parallelExecution in Test := false
+
 scalaVersion := "2.11.11"
 
 dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7"

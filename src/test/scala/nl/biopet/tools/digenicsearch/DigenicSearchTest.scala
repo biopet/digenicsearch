@@ -184,7 +184,7 @@ class DigenicSearchTest extends ToolTest[Args] {
     val outputDir = Files.createTempDir()
     DigenicSearch.main(
       defaultWgs2Arg(outputDir) ++ Array("--binSize",
-                                         "1000",
+                                         "5000",
                                          "--maxDistance",
                                          "999"))
 
