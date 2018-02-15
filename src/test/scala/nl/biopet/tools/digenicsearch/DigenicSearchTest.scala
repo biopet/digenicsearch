@@ -31,6 +31,7 @@ import nl.biopet.utils.conversions.yamlFileToMap
 class DigenicSearchTest extends ToolTest[Args] {
 
   System.setProperty("spark.sql.shuffle.partitions", "1")
+  System.setProperty("spark.driver.memory", "256M")
 
   def toolCommand: DigenicSearch.type = DigenicSearch
   @Test
