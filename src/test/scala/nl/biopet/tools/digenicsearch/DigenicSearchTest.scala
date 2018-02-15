@@ -31,7 +31,6 @@ import nl.biopet.utils.conversions.yamlFileToMap
 class DigenicSearchTest extends ToolTest[Args] {
 
   System.setProperty("spark.sql.shuffle.partitions", "1")
-  System.setProperty("spark.driver.memory", "256M")
 
   def toolCommand: DigenicSearch.type = DigenicSearch
   @Test
@@ -180,18 +179,18 @@ class DigenicSearchTest extends ToolTest[Args] {
     stats2("total_pairs") shouldBe 10
   }
 
-  @Test
-  def testMultiChunks(): Unit = {
-    val outputDir = Files.createTempDir()
-    DigenicSearch.main(
-      defaultWgs2Arg(outputDir) ++ Array("--binSize",
-                                         "5000",
-                                         "--maxDistance",
-                                         "999"))
-
-    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
-    stats("total_pairs") shouldBe 4
-  }
+//  @Test
+//  def testMultiChunks(): Unit = {
+//    val outputDir = Files.createTempDir()
+//    DigenicSearch.main(
+//      defaultWgs2Arg(outputDir) ++ Array("--binSize",
+//                                         "5000",
+//                                         "--maxDistance",
+//                                         "999"))
+//
+//    val stats = yamlFileToMap(new File(outputDir, "stats.yml"))
+//    stats("total_pairs") shouldBe 4
+//  }
 
   @Test
   def testSingleExternalFilter(): Unit = {
