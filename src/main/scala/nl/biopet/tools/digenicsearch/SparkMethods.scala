@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2017 Biopet
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package nl.biopet.tools.digenicsearch
 
 import java.io.{File, PrintWriter}
@@ -70,8 +91,8 @@ object SparkMethods extends Logging {
 
     combinationFilter.write.csv(outputPairs(cmdArgs.outputDir).getAbsolutePath)
     writeStatsFile(cmdArgs.outputDir,
-      Await.result(singleFilterTotal, Duration.Inf),
-      combinationFilter.count())
+                   Await.result(singleFilterTotal, Duration.Inf),
+                   combinationFilter.count())
     aggregateRegions.foreach(
       aggregateTotal(_, variants).write
         .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))
@@ -87,7 +108,7 @@ object SparkMethods extends Logging {
 
   /** Create regions as dataset */
   def regionsDataset(broadcasts: Broadcast[Broadcasts])(
-    implicit sparkSession: SparkSession): Dataset[IndexedRegions] = {
+      implicit sparkSession: SparkSession): Dataset[IndexedRegions] = {
     import sparkSession.implicits._
     sparkSession.sparkContext
       .parallelize(broadcasts.value.regions.zipWithIndex.map {
@@ -106,7 +127,7 @@ object SparkMethods extends Logging {
   /** Create aggregate regions as dataset if this is given on the commandline */
   def createAggregateRegions(aggregationFile: Option[File],
                              dict: SAMSequenceDictionary)(
-                              implicit sparkSession: SparkSession): Option[Dataset[Region]] = {
+      implicit sparkSession: SparkSession): Option[Dataset[Region]] = {
     import sparkSession.implicits._
     aggregationFile.map { file =>
       sparkSession.sparkContext
@@ -120,7 +141,7 @@ object SparkMethods extends Logging {
   def createAggregateFamilies(aggregateRegion: Dataset[Region],
                               variants: Dataset[Variant],
                               broadcasts: Broadcast[Broadcasts])(
-                               implicit sparkSession: SparkSession): Dataset[GeneFamilyCounts] = {
+      implicit sparkSession: SparkSession): Dataset[GeneFamilyCounts] = {
     import sparkSession.implicits._
     aggregateRegion
       .joinWith(
@@ -153,7 +174,7 @@ object SparkMethods extends Logging {
   /** Aggregate on genes (or other features inside the bed file) */
   def aggregateTotal(aggregateRegion: Dataset[Region],
                      variants: Dataset[Variant])(
-                      implicit sparkSession: SparkSession): Dataset[GeneCounts] = {
+      implicit sparkSession: SparkSession): Dataset[GeneCounts] = {
     import sparkSession.implicits._
     aggregateRegion
       .joinWith(
@@ -170,9 +191,9 @@ object SparkMethods extends Logging {
 
   def checkExistsOutput(outputDir: File): Unit = {
     require(!outputPairs(outputDir).exists(),
-      s"Output file already exists: ${outputPairs(outputDir)}")
+            s"Output file already exists: ${outputPairs(outputDir)}")
     require(!outputVariants(outputDir).exists(),
-      s"Output file already exists: ${outputVariants(outputDir)}")
+            s"Output file already exists: ${outputVariants(outputDir)}")
   }
 
   /** Writing a stats file */
@@ -180,10 +201,10 @@ object SparkMethods extends Logging {
                      singleFilterTotal: Long,
                      totalPairs: Long): Unit = {
     mapToYamlFile(Map(
-      "total_pairs" -> totalPairs,
-      "single_filter_total" -> singleFilterTotal
-    ),
-      new File(outputDir, "stats.yml"))
+                    "total_pairs" -> totalPairs,
+                    "single_filter_total" -> singleFilterTotal
+                  ),
+                  new File(outputDir, "stats.yml"))
   }
 
   case class Temp(v1: Variant, i2: Int)
@@ -192,7 +213,7 @@ object SparkMethods extends Logging {
   def createVariantCombinations(variants: Dataset[Variant],
                                 regionsRdd: Dataset[IndexedRegions],
                                 broadcasts: Broadcast[Broadcasts])(
-                                 implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
 
     val indexCombination = createCombinations(regionsRdd, broadcasts)
@@ -211,8 +232,8 @@ object SparkMethods extends Logging {
           if (v1.contig > v2.contig || v1.pos < v2.pos)
             Some(
               VariantCombination(v1,
-                v2,
-                Variant.alleleCombinations(v1, v2).toList))
+                                 v2,
+                                 Variant.alleleCombinations(v1, v2).toList))
           else None
       }
   }
@@ -220,7 +241,7 @@ object SparkMethods extends Logging {
   /** Filter combinations */
   def filterVariantCombinations(combinations: Dataset[VariantCombination],
                                 broadcasts: Broadcast[Broadcasts])(
-                                 implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
+      implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
 
     combinations
@@ -233,7 +254,7 @@ object SparkMethods extends Logging {
   /** This reads all regions and makes a [[Variant]] dataset */
   def variantsDataSet(regionsRdd: Dataset[IndexedRegions],
                       broadcasts: Broadcast[Broadcasts])(
-                       implicit sparkSession: SparkSession): Dataset[Variant] = {
+      implicit sparkSession: SparkSession): Dataset[Variant] = {
     import sparkSession.implicits._
     regionsRdd
       .mapPartitions { it =>
@@ -243,10 +264,10 @@ object SparkMethods extends Logging {
         it.flatMap { r =>
           r.regions.flatMap(
             new LoadRegion(readers,
-              externalReaders,
-              _,
-              r.idx,
-              broadcasts.value))
+                           externalReaders,
+                           _,
+                           r.idx,
+                           broadcasts.value))
         }
       }
   }
@@ -256,27 +277,27 @@ object SparkMethods extends Logging {
                    pairFilters: List[AnnotationFilter]): Boolean = {
     val list = List(combination.v1, combination.v2)
     pairFilters.isEmpty ||
-      pairFilters.forall { c =>
-        list.exists(
-          v =>
-            v.annotations
-              .find(_.key == c.key)
-              .toList
-              .flatMap(_.value)
-              .forall(c.method))
-      }
+    pairFilters.forall { c =>
+      list.exists(
+        v =>
+          v.annotations
+            .find(_.key == c.key)
+            .toList
+            .flatMap(_.value)
+            .forall(c.method))
+    }
   }
 
   /** This created a list of combinations rdds */
   def createCombinations(regionsRdd: Dataset[IndexedRegions],
                          broadcasts: Broadcast[Broadcasts])(
-                          implicit sparkSession: SparkSession): Dataset[Combination] = {
+      implicit sparkSession: SparkSession): Dataset[Combination] = {
     import sparkSession.implicits._
     regionsRdd.flatMap { r =>
       for (i <- r.idx until broadcasts.value.regions.length
            if distanceFilter(r.regions,
-             broadcasts.value.regions(i),
-             broadcasts.value.maxDistance)) yield {
+                             broadcasts.value.regions(i),
+                             broadcasts.value.maxDistance)) yield {
         Combination(r.idx, i)
       }
     }
@@ -293,7 +314,7 @@ object SparkMethods extends Logging {
             r1.distance(r2) match {
               case Some(x) => x <= distance
               case _       => false
-            }))
+          }))
       case _ => true
     }
   }
@@ -313,13 +334,13 @@ object SparkMethods extends Logging {
     * this reduces the number of combinations, this step is only there to improve performance */
   def singleAnnotationFilter(v: Variant, broadcasts: Broadcasts): Boolean = {
     broadcasts.singleFilters.isEmpty ||
-      broadcasts.singleFilters.forall { c =>
-        v.annotations
-          .find(_.key == c.key)
-          .toList
-          .flatMap(_.value)
-          .forall(c.method)
-      }
+    broadcasts.singleFilters.forall { c =>
+      v.annotations
+        .find(_.key == c.key)
+        .toList
+        .flatMap(_.value)
+        .forall(c.method)
+    }
   }
 
   /** creates regions to analyse */
@@ -331,7 +352,7 @@ object SparkMethods extends Logging {
       case _ => BedRecordList.fromReference(cmdArgs.reference)
     }).combineOverlap
       .scatter(cmdArgs.binSize,
-        maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
+               maxContigsInSingleJob = Some(cmdArgs.maxContigsInSingleJob))
     regions.map(x =>
       x.map(y => Region(dict.getSequenceIndex(y.chr), y.start, y.end)))
   }
