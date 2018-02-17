@@ -33,7 +33,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 object SparkMethods extends Logging {
@@ -89,18 +89,25 @@ object SparkMethods extends Logging {
         .map(_.toResultLine(broadcasts.value))
         .cache()
 
-    combinationFilter.write.csv(outputPairs(cmdArgs.outputDir).getAbsolutePath)
-    writeStatsFile(cmdArgs.outputDir,
-                   Await.result(singleFilterTotal, Duration.Inf),
-                   combinationFilter.count())
-    aggregateRegions.foreach(
-      aggregateTotal(_, variants).write
-        .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))
-    variantsAllFiltered
-      .map(_.toCsv(broadcasts.value))
-      .write
-      .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)
-    familyFuture.foreach(Await.result(_, Duration.Inf))
+    val futures = List(
+      Future(
+        combinationFilter.write.csv(
+          outputPairs(cmdArgs.outputDir).getAbsolutePath)),
+      Future(
+        writeStatsFile(cmdArgs.outputDir,
+                       Await.result(singleFilterTotal, Duration.Inf),
+                       combinationFilter.count())),
+      Future(
+        aggregateRegions.foreach(aggregateTotal(_, variants).write
+          .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))),
+      Future(
+        variantsAllFiltered
+          .map(_.toCsv(broadcasts.value))
+          .write
+          .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath))
+    ) ::: familyFuture.toList
+    variants.unpersist()
+    Await.result(Future.sequence(futures), Duration.Inf)
 
     sparkSession.stop()
     logger.info("Done")
