@@ -8,8 +8,6 @@ biopetUrlName := "digenicsearch"
 
 biopetIsTool := true
 
-//parallelExecution in Test := false
-
 fork in Test := true
 
 scalaVersion := "2.11.11"
