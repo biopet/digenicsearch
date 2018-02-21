@@ -106,30 +106,29 @@ class LoadRegion(inputReaders: List[VCFFileReader],
     }
     val genotypes1 = genotypes.map { case (g, _) => g }.toList
 
-    val externalGenotypes: Array[List[Genotype]] = externalIterators.map {
-      it =>
-        if (it.hasNext) {
-          while (it.hasNext && it.head.getStart < position) it.next()
-          if (it.hasNext && it.head.getStart == position) {
-            val record = it.next()
-            if (record.getReference == refAlleles.head)
-              (for (g <- record.getGenotypes) yield {
-                Genotype(
-                  g.getAlleles
-                    .map { a =>
-                      if (a.isNoCall) (-1).toShort
-                      else {
-                        val i = allAllelesString.indexOf(a.toString).toShort
-                        if (i == -1) Short.MaxValue
-                        else i
-                      }
+    val externalGenotypes: Array[List[Genotype]] = externalIterators.map { it =>
+      if (it.hasNext) {
+        while (it.hasNext && it.head.getStart < position) it.next()
+        if (it.hasNext && it.head.getStart == position) {
+          val record = it.next()
+          if (record.getReference == refAlleles.head)
+            (for (g <- record.getGenotypes) yield {
+              Genotype(
+                g.getAlleles
+                  .map { a =>
+                    if (a.isNoCall) (-1).toShort
+                    else {
+                      val i = allAllelesString.indexOf(a.toString).toShort
+                      if (i == -1) Short.MaxValue
+                      else i
                     }
-                    .toList
-                    .sorted)
-              }).toList
-            else Nil
-          } else Nil
+                  }
+                  .toList
+                  .sorted)
+            }).toList
+          else Nil
         } else Nil
+      } else Nil
     }
 
     val detectionResult =

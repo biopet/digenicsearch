@@ -185,7 +185,8 @@ case class Variant(
   }
 
   /** This method will remove alleles and create a new Variant object */
-  private def removeAlleles(removeAlleles: Set[List[Short]]): Option[Variant] = {
+  private def removeAlleles(
+      removeAlleles: Set[List[Short]]): Option[Variant] = {
     val dr = DetectionResult(this.detectionResult.result.filter {
       case (allele, _) => !removeAlleles.contains(allele)
     })

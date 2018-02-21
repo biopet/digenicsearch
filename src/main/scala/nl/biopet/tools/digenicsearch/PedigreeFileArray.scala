@@ -54,7 +54,8 @@ case class PedigreeFileArray(pedFile: PedigreeFile, samples: Array[String]) {
 }
 
 object PedigreeFileArray {
-  def fromFiles(files: List[File], samples: Array[String]): PedigreeFileArray = {
+  def fromFiles(files: List[File],
+                samples: Array[String]): PedigreeFileArray = {
     val pedSamples = files.map(PedigreeFile.fromFile).reduce(_ + _)
     PedigreeFileArray(new PedigreeFile(pedSamples.samples.filter {
       case (s, _) =>

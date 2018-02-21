@@ -117,7 +117,7 @@ case class VariantCombination(v1: Variant,
               .forall { filter =>
                 fractions(a) match {
                   case Some(s) => filter.method(s)
-                  case _ => true
+                  case _       => true
                 }
               }
           }
