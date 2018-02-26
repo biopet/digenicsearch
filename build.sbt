@@ -20,7 +20,7 @@ libraryDependencies += "com.github.biopet" %% "common-utils" % "0.3"
 libraryDependencies += "com.github.biopet" %% "spark-utils" % "0.3"
 libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.3"
 libraryDependencies += "com.github.biopet" %% "ngs-utils" % "0.3"
-libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.2-SNAPSHOT" % Test changing ()
+libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.2.1"
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "2.2.1" % Provided
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.2.1" % Provided
