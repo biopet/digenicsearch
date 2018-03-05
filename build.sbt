@@ -22,8 +22,8 @@ dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.
 dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7"
 
 libraryDependencies += "com.github.biopet" %% "common-utils" % "0.3.1"
-libraryDependencies += "com.github.biopet" %% "spark-utils" % "0.3"
-libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.3"
+libraryDependencies += "com.github.biopet" %% "spark-utils" % "0.3.1"
+libraryDependencies += "com.github.biopet" %% "tool-utils" % "0.3.1"
 libraryDependencies += "com.github.biopet" %% "ngs-utils" % "0.3.1"
 libraryDependencies += "com.github.biopet" %% "tool-test-utils" % "0.2.1" % Test
 
