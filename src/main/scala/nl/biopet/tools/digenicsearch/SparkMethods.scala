@@ -113,11 +113,13 @@ object SparkMethods extends Logging {
     logger.info("Done")
   }
 
-  def familyCombinations(variants: Dataset[Variant],
-                         broadcasts: Broadcast[Broadcasts],
-                         familyId: Int,
-                         regions: Dataset[IndexedRegions],
-                         outputDir: File): Future[Unit] = {
+  def familyCombinations(
+      variants: Dataset[Variant],
+      broadcasts: Broadcast[Broadcasts],
+      familyId: Int,
+      regions: Dataset[IndexedRegions],
+      outputDir: File)(implicit sparkSession: SparkSession): Future[Unit] = {
+    import sparkSession.implicits._
     val variantsFamilyFiltered =
       variants
         .flatMap(x => x.filterFamilyFractions(broadcasts.value, Some(familyId)))
@@ -142,7 +144,9 @@ object SparkMethods extends Logging {
   def familyAggregation(variants: Dataset[Variant],
                         broadcasts: Broadcast[Broadcasts],
                         aggregateRegions: Option[Dataset[Region]],
-                        outputDir: File): Option[Future[Unit]] = {
+                        outputDir: File)(
+      implicit sparkSession: SparkSession): Option[Future[Unit]] = {
+    import sparkSession.implicits._
     val variantsAggregateFamilyFiltered =
       variants.flatMap(x => x.filterFamilyFractions(broadcasts.value)).cache()
     val aggregateFamilies = aggregateRegions.map(
