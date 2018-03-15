@@ -101,7 +101,8 @@ case class VariantCombination(v1: Variant,
     val alleles1 = this.v1.externalDetectionResult(idx).result.toMap
     val alleles2 = this.v2.externalDetectionResult(idx).result.toMap
 
-    (for (c <- alleles.toIterator) yield {
+    (for (c <- alleles.toIterator
+          if alleles1.contains(c.a1) && alleles2.contains(c.a2)) yield {
       val allSamples = alleles1(c.a1).zip(alleles2(c.a2))
       val fraction = allSamples.count {
         case (a, b) =>
@@ -123,7 +124,7 @@ case class VariantCombination(v1: Variant,
             broadcasts
               .pairExternalFilters(idx)
               .forall { filter =>
-                fractions(a) match {
+                fractions.get(a).flatten match {
                   case Some(s) => filter.method(s)
                   case _       => true
                 }

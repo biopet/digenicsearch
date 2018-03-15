@@ -135,8 +135,10 @@ object SparkMethods extends Logging {
       .flatMap(_.filterExternalPair(broadcasts.value))
 
     Future(
-      filterCombinations.write.csv(
-        outputFamilyPairs(
+      filterCombinations
+        .map(_.toResultLine(broadcasts.value))
+        .write
+        .csv(outputFamilyPairs(
           outputDir,
           broadcasts.value.pedigree.families(familyId)).getAbsolutePath))
   }
