@@ -65,16 +65,42 @@ object SparkMethods extends Logging {
                                                   broadcasts,
                                                   aggregateRegions,
                                                   cmdArgs.outputDir)
-
     val familyFilter = Future.sequence(
-      broadcasts.value.pedigree.families.indices.map(
-        id =>
-          familyCombinations(variants,
-                             broadcasts,
-                             id,
-                             regions,
-                             cmdArgs.outputDir)))
+      cmdArgs.onlyFamily
+        .map(x => List(broadcasts.value.pedigree.families.indexOf(x)))
+        .getOrElse(broadcasts.value.pedigree.families.indices.toList)
+        .map(
+          id =>
+            familyCombinations(variants,
+                               broadcasts,
+                               id,
+                               regions,
+                               cmdArgs.outputDir)))
 
+    val allCombinationFutures =
+      if (cmdArgs.onlyFamily.isEmpty)
+        allCombination(variants, broadcasts, regions, cmdArgs.outputDir)
+      else Nil
+
+    val futures = allCombinationFutures ::: List(
+      Future(
+        aggregateRegions.foreach(aggregateTotal(_, variants).write
+          .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))),
+      familyFilter
+    ) ::: familyAggregateFuture.toList
+    variants.unpersist()
+    Await.result(Future.sequence(futures), Duration.Inf)
+
+    sparkSession.stop()
+    logger.info("Done")
+  }
+
+  def allCombination(variants: Dataset[Variant],
+                     broadcasts: Broadcast[Broadcasts],
+                     regions: Dataset[IndexedRegions],
+                     outputDir: File)(
+      implicit sparkSession: SparkSession): List[Future[Unit]] = {
+    import sparkSession.implicits._
     val variantsAllFiltered =
       variants.flatMap(x => x.filterSingleFraction(broadcasts.value)).cache()
     val singleFilterTotal = variantsAllFiltered.rdd.countAsync()
@@ -88,29 +114,19 @@ object SparkMethods extends Logging {
         .map(_.toResultLine(broadcasts.value))
         .cache()
 
-    val futures = List(
+    List(
       Future(
-        combinationAllFilter.write.csv(
-          outputPairs(cmdArgs.outputDir).getAbsolutePath)),
-      Future(
-        writeStatsFile(cmdArgs.outputDir,
-                       Await.result(singleFilterTotal, Duration.Inf),
-                       combinationAllFilter.count())),
-      Future(
-        aggregateRegions.foreach(aggregateTotal(_, variants).write
-          .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))),
+        combinationAllFilter.write.csv(outputPairs(outputDir).getAbsolutePath)),
       Future(
         variantsAllFiltered
           .map(_.toCsv(broadcasts.value))
           .write
-          .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath)),
-      familyFilter
-    ) ::: familyAggregateFuture.toList
-    variants.unpersist()
-    Await.result(Future.sequence(futures), Duration.Inf)
-
-    sparkSession.stop()
-    logger.info("Done")
+          .csv(outputVariants(outputDir).getAbsolutePath)),
+      Future(
+        writeStatsFile(outputDir,
+                       Await.result(singleFilterTotal, Duration.Inf),
+                       combinationAllFilter.count()))
+    )
   }
 
   def familyCombinations(
