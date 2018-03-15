@@ -62,6 +62,7 @@ package object digenicsearch {
                            contig2: String,
                            pos2: Int,
                            affectedFractions: String,
+                           familyAffectedFractions: String,
                            externalFractions: String)
 
 }

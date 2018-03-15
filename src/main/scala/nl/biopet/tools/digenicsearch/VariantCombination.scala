@@ -144,6 +144,17 @@ case class VariantCombination(v1: Variant,
           s"$c:a=${f.affected},u=${f.unaffected}"
       }
       .mkString(";")
+    val familyFractions = broadcasts.pedigree.families.zipWithIndex
+      .map {
+        case (name, idx) =>
+          getFractions(broadcasts, Some(idx))
+            .map {
+              case (c, f) =>
+                s"$name=($c:a=${f.affected},u=${f.unaffected})"
+            }
+            .mkString(";")
+      }
+      .mkString(";")
     val externalFractions: String = v1.externalDetectionResult.indices
       .map(
         idx =>
@@ -159,6 +170,7 @@ case class VariantCombination(v1: Variant,
       broadcasts.dict.getSequence(v2.contig).getSequenceName,
       v2.pos,
       fractions,
+      familyFractions,
       externalFractions
     )
   }
