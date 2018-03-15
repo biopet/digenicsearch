@@ -56,8 +56,9 @@ case class VariantCombination(v1: Variant,
   }
 
   /** Returns fractions for each allele combination */
-  def pedigreeFractions(
-      broadcasts: Broadcasts): Map[AlleleCombination, PedigreeFraction] = {
+  def getFractions(
+      broadcasts: Broadcasts,
+      familyId: Option[Int] = None): Map[AlleleCombination, Fraction] = {
     val alleles1 = v1.detectionResult.result.toMap
     val alleles2 = v2.detectionResult.result.toMap
 
@@ -65,19 +66,26 @@ case class VariantCombination(v1: Variant,
       val combined = alleles1(c.a1).zip(alleles2(c.a2)).map {
         case (c1, c2) => c1 && c2
       }
-      val affectedGenotypes = broadcasts.pedigree.affectedArray.map(combined)
-      val unaffectedGenotypes =
-        broadcasts.pedigree.unaffectedArray.map(combined)
-
-      c -> PedigreeFraction(Variant.affectedFraction(affectedGenotypes),
-                            Variant.unaffectedFraction(unaffectedGenotypes))
+      val affectedGenotypes = familyId match {
+        case Some(id) => broadcasts.pedigree.familiesAffected(id).map(combined)
+        case _        => broadcasts.pedigree.affectedArray.map(combined)
+      }
+      val unaffectedGenotypes = familyId match {
+        case Some(id) =>
+          broadcasts.pedigree.familiesUnaffected(id).map(combined)
+        case _ => broadcasts.pedigree.unaffectedArray.map(combined)
+      }
+      c -> Fraction(Variant.affectedFraction(affectedGenotypes),
+                    Variant.unaffectedFraction(unaffectedGenotypes))
     }.toMap
   }
 
   /** Filter based on fractions */
-  def filterPairFraction(broadcasts: Broadcasts): Option[VariantCombination] = {
+  def filterPairFraction(
+      broadcasts: Broadcasts,
+      familyId: Option[Int] = None): Option[VariantCombination] = {
 
-    val fractions = pedigreeFractions(broadcasts)
+    val fractions = getFractions(broadcasts, familyId)
 
     val newAlleles = alleles.filter { alleles =>
       fractions(alleles).unaffected <= broadcasts.fractionsCutoffs.pairUnaffectedFraction &&
@@ -129,7 +137,7 @@ case class VariantCombination(v1: Variant,
 
   /** Convert to a result line */
   def toResultLine(broadcasts: Broadcasts): ResultLineCsv = {
-    val fractions = pedigreeFractions(broadcasts)
+    val fractions = getFractions(broadcasts)
       .map {
         case (c, f) =>
           s"$c:a=${f.affected},u=${f.unaffected}"

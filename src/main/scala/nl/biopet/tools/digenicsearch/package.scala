@@ -38,7 +38,7 @@ package object digenicsearch {
 
   case class GenotypeAnnotation(dp: Int, gq: Int)
 
-  case class PedigreeFraction(affected: Double, unaffected: Double)
+  case class Fraction(affected: Double, unaffected: Double)
 
   case class AlleleCombination(a1: List[Short], a2: List[Short]) {
     override def toString: String = {
