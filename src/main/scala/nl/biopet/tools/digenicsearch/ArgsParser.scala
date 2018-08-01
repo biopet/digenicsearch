@@ -157,6 +157,9 @@ class ArgsParser(toolCommand: ToolCommand[Args])
   opt[String]("sparkMaster")
     .action((x, c) => c.copy(sparkMaster = Some(x)))
     .text("Spark master, default to local[1]")
+  opt[String]("onlyFamily")
+    .action((x, c) => c.copy(onlyFamily = Some(x)))
+    .text("Limit execution to a single family")
 }
 
 object ArgsParser {

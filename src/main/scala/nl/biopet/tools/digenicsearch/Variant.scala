@@ -66,22 +66,21 @@ case class Variant(
 
   /** Get fractions for the complete input set */
   def getAffectedFractions(
-      broadcasts: Broadcasts): Map[List[Short], PedigreeFraction] = {
+      broadcasts: Broadcasts): Map[List[Short], Fraction] = {
     val alleles = detectionResult.result.toMap
 
     for ((allele, result) <- alleles) yield {
       val affectedGenotypes = broadcasts.pedigree.affectedArray.map(result)
       val unaffectedGenotypes = broadcasts.pedigree.unaffectedArray.map(result)
 
-      allele -> PedigreeFraction(
-        Variant.affectedFraction(affectedGenotypes),
-        Variant.unaffectedFraction(unaffectedGenotypes))
+      allele -> Fraction(Variant.affectedFraction(affectedGenotypes),
+                         Variant.unaffectedFraction(unaffectedGenotypes))
     }
   }
 
   /** Returns all fractions for each family */
   def getFamilyFractions(
-      broadcasts: Broadcasts): Array[Map[List[Short], PedigreeFraction]] = {
+      broadcasts: Broadcasts): Array[Map[List[Short], Fraction]] = {
     val alleles = detectionResult.result.toMap
 
     for (family <- broadcasts.pedigree.families.indices.toArray) yield {
@@ -91,33 +90,42 @@ case class Variant(
         val unaffectedGenotypes =
           broadcasts.pedigree.familiesUnaffected(family).map(result)
 
-        allele -> PedigreeFraction(
-          Variant.affectedFraction(affectedGenotypes),
-          Variant.unaffectedFraction(unaffectedGenotypes))
+        allele -> Fraction(Variant.affectedFraction(affectedGenotypes),
+                           Variant.unaffectedFraction(unaffectedGenotypes))
       }
     }
   }
 
   /** Filter based on family fractions, usingOtherFamilies argument is used here */
-  def filterFamilyFractions(broadcasts: Broadcasts): Option[Variant] = {
-    val fractions = getFamilyFractions(broadcasts)
+  def filterFamilyFractions(broadcasts: Broadcasts,
+                            familyId: Option[Int] = None): Option[Variant] = {
+    val fractions = getFamilyFractions(broadcasts).zipWithIndex
 
     val alleles = detectionResult.result.map { case (a, _) => a }
 
     val teRemove = alleles.filter { allele =>
       // creates a array of families which families are passed
-      val keep = fractions.map { family =>
-        val f = family(allele)
-        (f.unaffected <= broadcasts.fractionsCutoffs.singleFamilyUnaffectedFraction) && (f.affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction)
+      val keep = fractions.map {
+        case (family, idx) =>
+          val f = family(allele)
+          val k = (f.unaffected <= broadcasts.fractionsCutoffs.singleFamilyUnaffectedFraction) && (f.affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction)
+          familyId match {
+            case Some(id) => if (id == idx) k else false
+            case _        => k
+          }
       }
 
-      if (keep.forall(_ == true)) true
+      if (keep.forall(_ == true)) familyId.isEmpty
       else {
         val remove = keep.forall(_ == false)
         if (!keep.forall(_ == false) && broadcasts.usingOtherFamilies) {
           keep.zipWithIndex
             .flatMap { case (b, idx) => if (b) None else Some(idx) }
-            .forall(fractions(_)(allele).affected <= 0.0)
+            .forall { x =>
+              val (map, _) = fractions(x)
+              map(allele).affected <= 0.0 ||
+              map(allele).affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction
+            }
         } else remove
       }
     }

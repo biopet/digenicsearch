@@ -60,14 +60,119 @@ object SparkMethods extends Logging {
       .filter(x => singleAnnotationFilter(x, broadcasts.value))
       .flatMap(x => x.filterExternalFractions(broadcasts.value))
       .cache()
+
+    val familyAggregateFuture = familyAggregation(variants,
+                                                  broadcasts,
+                                                  aggregateRegions,
+                                                  cmdArgs.outputDir)
+    val familyFilter = Future.sequence(
+      cmdArgs.onlyFamily
+        .map(x => List(broadcasts.value.pedigree.families.indexOf(x)))
+        .getOrElse(broadcasts.value.pedigree.families.indices.toList)
+        .map(
+          id =>
+            familyCombinations(variants,
+                               broadcasts,
+                               id,
+                               regions,
+                               cmdArgs.outputDir)))
+
+    val allCombinationFutures =
+      if (cmdArgs.onlyFamily.isEmpty)
+        allCombination(variants, broadcasts, regions, cmdArgs.outputDir)
+      else Nil
+
+    val futures = allCombinationFutures ::: List(
+      Future(
+        aggregateRegions.foreach(aggregateTotal(_, variants).write
+          .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))),
+      familyFilter
+    ) ::: familyAggregateFuture.toList
+    variants.unpersist()
+    Await.result(Future.sequence(futures), Duration.Inf)
+
+    sparkSession.stop()
+    logger.info("Done")
+  }
+
+  def allCombination(variants: Dataset[Variant],
+                     broadcasts: Broadcast[Broadcasts],
+                     regions: Dataset[IndexedRegions],
+                     outputDir: File)(
+      implicit sparkSession: SparkSession): List[Future[Unit]] = {
+    import sparkSession.implicits._
+    val variantsAllFiltered =
+      variants.flatMap(x => x.filterSingleFraction(broadcasts.value)).cache()
+    val singleFilterTotal = variantsAllFiltered.rdd.countAsync()
+
+    val combinationsAll =
+      createVariantCombinations(variantsAllFiltered, regions, broadcasts)
+
+    val combinationAllFilter =
+      filterAllVariantCombinations(combinationsAll, broadcasts)
+        .map(_.cleanResults)
+        .map(_.toResultLine(broadcasts.value))
+        .cache()
+
+    List(
+      Future(
+        combinationAllFilter.write.csv(outputPairs(outputDir).getAbsolutePath)),
+      Future(
+        variantsAllFiltered
+          .map(_.toCsv(broadcasts.value))
+          .write
+          .csv(outputVariants(outputDir).getAbsolutePath)),
+      Future(
+        writeStatsFile(outputDir,
+                       Await.result(singleFilterTotal, Duration.Inf),
+                       combinationAllFilter.count()))
+    )
+  }
+
+  def familyCombinations(
+      variants: Dataset[Variant],
+      broadcasts: Broadcast[Broadcasts],
+      familyId: Int,
+      regions: Dataset[IndexedRegions],
+      outputDir: File)(implicit sparkSession: SparkSession): Future[Unit] = {
+    import sparkSession.implicits._
     val variantsFamilyFiltered =
+      variants
+        .flatMap(x => x.filterFamilyFractions(broadcasts.value, Some(familyId)))
+        .cache()
+
+    val combinations =
+      createVariantCombinations(variantsFamilyFiltered, regions, broadcasts)
+
+    val filterCombinations = combinations
+      .filter(x => distanceFilter(x.v1, x.v2, broadcasts.value.maxDistance))
+      .filter(pairedAnnotationFilter(_, broadcasts.value.pairFilters))
+      .flatMap(_.filterPairFraction(broadcasts.value, Some(familyId)))
+      .flatMap(_.filterExternalPair(broadcasts.value))
+
+    Future(
+      filterCombinations
+        .map(_.toResultLine(broadcasts.value))
+        .write
+        .csv(outputFamilyPairs(
+          outputDir,
+          broadcasts.value.pedigree.families(familyId)).getAbsolutePath))
+  }
+
+  def familyAggregation(variants: Dataset[Variant],
+                        broadcasts: Broadcast[Broadcasts],
+                        aggregateRegions: Option[Dataset[Region]],
+                        outputDir: File)(
+      implicit sparkSession: SparkSession): Option[Future[Unit]] = {
+    import sparkSession.implicits._
+    val variantsAggregateFamilyFiltered =
       variants.flatMap(x => x.filterFamilyFractions(broadcasts.value)).cache()
     val aggregateFamilies = aggregateRegions.map(
-      createAggregateFamilies(_, variantsFamilyFiltered, broadcasts))
+      createAggregateFamilies(_, variantsAggregateFamilyFiltered, broadcasts))
 
-    val familyFuture = aggregateFamilies.flatMap { counts =>
+    aggregateFamilies.flatMap { counts =>
       Some(counts.rdd.sortBy(_.gene).collectAsync().map { data =>
-        val writer = new PrintWriter(outputFamilyGenes(cmdArgs.outputDir))
+        val writer = new PrintWriter(outputFamilyGenes(outputDir))
         writer.println(
           "gene\t" + broadcasts.value.pedigree.families.mkString("\t"))
         data.foreach(x =>
@@ -75,42 +180,6 @@ object SparkMethods extends Logging {
         writer.close()
       })
     }
-
-    val variantsAllFiltered =
-      variants.flatMap(x => x.filterSingleFraction(broadcasts.value)).cache()
-    val singleFilterTotal = variantsAllFiltered.rdd.countAsync()
-
-    val combinations =
-      createVariantCombinations(variantsAllFiltered, regions, broadcasts)
-
-    val combinationFilter =
-      filterVariantCombinations(combinations, broadcasts)
-        .map(_.cleanResults)
-        .map(_.toResultLine(broadcasts.value))
-        .cache()
-
-    val futures = List(
-      Future(
-        combinationFilter.write.csv(
-          outputPairs(cmdArgs.outputDir).getAbsolutePath)),
-      Future(
-        writeStatsFile(cmdArgs.outputDir,
-                       Await.result(singleFilterTotal, Duration.Inf),
-                       combinationFilter.count())),
-      Future(
-        aggregateRegions.foreach(aggregateTotal(_, variants).write
-          .csv(outputAggregation(cmdArgs.outputDir).getAbsolutePath))),
-      Future(
-        variantsAllFiltered
-          .map(_.toCsv(broadcasts.value))
-          .write
-          .csv(outputVariants(cmdArgs.outputDir).getAbsolutePath))
-    ) ::: familyFuture.toList
-    variants.unpersist()
-    Await.result(Future.sequence(futures), Duration.Inf)
-
-    sparkSession.stop()
-    logger.info("Done")
   }
 
   /** Create regions as dataset */
@@ -129,6 +198,8 @@ object SparkMethods extends Logging {
   def outputAggregation(outputDir: File): File =
     new File(outputDir, "aggregation")
   def outputPairs(outputDir: File): File = new File(outputDir, "pairs")
+  def outputFamilyPairs(outputDir: File, familyName: String) =
+    new File(outputDir, "family" + File.separator + familyName)
   def outputVariants(outputDir: File): File = new File(outputDir, "variants")
 
   /** Create aggregate regions as dataset if this is given on the commandline */
@@ -236,7 +307,7 @@ object SparkMethods extends Logging {
       .flatMap {
         case (t, v2) =>
           val v1 = t.v1
-          if (v1.contig > v2.contig || v1.pos < v2.pos)
+          if (v1.contig < v2.contig || (v1.contig == v2.contig && v1.pos < v2.pos))
             Some(
               VariantCombination(v1,
                                  v2,
@@ -246,14 +317,14 @@ object SparkMethods extends Logging {
   }
 
   /** Filter combinations */
-  def filterVariantCombinations(combinations: Dataset[VariantCombination],
-                                broadcasts: Broadcast[Broadcasts])(
+  def filterAllVariantCombinations(combinations: Dataset[VariantCombination],
+                                   broadcasts: Broadcast[Broadcasts])(
       implicit sparkSession: SparkSession): Dataset[VariantCombination] = {
     import sparkSession.implicits._
 
     combinations
       .filter(x => distanceFilter(x.v1, x.v2, broadcasts.value.maxDistance))
-      .filter(pairedFilter(_, broadcasts.value.pairFilters))
+      .filter(pairedAnnotationFilter(_, broadcasts.value.pairFilters))
       .flatMap(_.filterPairFraction(broadcasts.value))
       .flatMap(_.filterExternalPair(broadcasts.value))
   }
@@ -280,8 +351,8 @@ object SparkMethods extends Logging {
   }
 
   /** This filters if 1 of the 2 variants returns true */
-  def pairedFilter(combination: VariantCombination,
-                   pairFilters: List[AnnotationFilter]): Boolean = {
+  def pairedAnnotationFilter(combination: VariantCombination,
+                             pairFilters: List[AnnotationFilter]): Boolean = {
     val list = List(combination.v1, combination.v2)
     pairFilters.isEmpty ||
     pairFilters.forall { c =>
