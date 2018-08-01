@@ -307,7 +307,7 @@ object SparkMethods extends Logging {
       .flatMap {
         case (t, v2) =>
           val v1 = t.v1
-          if (v1.contig < v2.contig || v1.pos < v2.pos)
+          if (v1.contig < v2.contig || (v1.contig == v2.contig && v1.pos < v2.pos))
             Some(
               VariantCombination(v1,
                                  v2,
