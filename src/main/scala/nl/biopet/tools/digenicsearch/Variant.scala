@@ -121,10 +121,11 @@ case class Variant(
         if (!keep.forall(_ == false) && broadcasts.usingOtherFamilies) {
           keep.zipWithIndex
             .flatMap { case (b, idx) => if (b) None else Some(idx) }
-            .forall(x =>
-              fractions(x)._1(allele).affected <= 0.0 || fractions(x)
-                ._1(allele)
-                .affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction)
+            .forall { x =>
+              val (map, _) = fractions(x)
+              map(allele).affected <= 0.0 ||
+              map(allele).affected >= broadcasts.fractionsCutoffs.singleFamilyAffectedFraction
+            }
         } else remove
       }
     }
