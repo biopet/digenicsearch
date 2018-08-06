@@ -40,4 +40,5 @@ case class Args(inputFiles: List[File] = Nil,
                 maxDistance: Option[Long] = None,
                 binSize: Int = 1000000,
                 maxContigsInSingleJob: Int = 250,
-                sparkMaster: Option[String] = None)
+                sparkMaster: Option[String] = None,
+                onlyFamily: Option[String] = None)
